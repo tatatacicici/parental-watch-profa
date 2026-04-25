@@ -1,5 +1,8 @@
 package com.example.parental_watch.ui.screens
 
+import android.app.admin.DevicePolicyManager
+import android.content.ComponentName
+import android.content.Intent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,6 +17,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -21,18 +25,48 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.parental_watch.data.preference.PreferencesManager
-import com.example.parental_watch.ui.theme.ParentalWatchTheme
+import com.example.parental_watch.service.ParentalDeviceAdminReceiver
+import com.example.parental_watch.utils.AccessibilityUtils
 
 @Composable
 fun ParentDashboardScreen(
     prefManager: PreferencesManager,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onWhitelistClick: () -> Unit,
+    onLogClick: () -> Unit,
+    onChangePinClick: () -> Unit
 ) {
-    var isServiceEnabled by remember {
-        mutableStateOf(prefManager.isServiceEnabled())
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    var isServiceEnabled by remember { mutableStateOf(prefManager.isServiceEnabled()) }
+    var isAccessibilityEnabled by remember {
+        mutableStateOf(AccessibilityUtils.isAccessibilityServiceEnabled(context))
+    }
+
+    // Device Admin
+    val devicePolicyManager = context.getSystemService(DevicePolicyManager::class.java)
+    val adminComponent = ComponentName(context, ParentalDeviceAdminReceiver::class.java)
+    var isAdminActive by remember {
+        mutableStateOf(devicePolicyManager.isAdminActive(adminComponent))
+    }
+
+    // Re-cek status saat user balik dari Settings
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                isAccessibilityEnabled =
+                    AccessibilityUtils.isAccessibilityServiceEnabled(context)
+                isAdminActive = devicePolicyManager.isAdminActive(adminComponent)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     Scaffold { innerPadding ->
@@ -50,94 +84,126 @@ fun ParentDashboardScreen(
 
             Spacer(modifier = Modifier.height(4.dp))
 
+            // Status accessibility
             Text(
-                text = if (isServiceEnabled) "Layanan: Aktif ✓" else "Layanan: Nonaktif",
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (isServiceEnabled)
+                text = if (isAccessibilityEnabled) "Accessibility: Aktif ✓"
+                else "Accessibility: Belum diaktifkan ⚠",
+                style = MaterialTheme.typography.bodySmall,
+                color = if (isAccessibilityEnabled)
+                    MaterialTheme.colorScheme.primary
+                else
+                    MaterialTheme.colorScheme.error
+            )
+
+            // Status layanan
+            Text(
+                text = if (isServiceEnabled && isAccessibilityEnabled) "Layanan: Berjalan ✓"
+                else "Layanan: Nonaktif",
+                style = MaterialTheme.typography.bodySmall,
+                color = if (isServiceEnabled && isAccessibilityEnabled)
                     MaterialTheme.colorScheme.primary
                 else
                     MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            // Status Device Admin
+            Text(
+                text = if (isAdminActive) "Proteksi Uninstall: Aktif ✓"
+                else "Proteksi Uninstall: Nonaktif",
+                style = MaterialTheme.typography.bodySmall,
+                color = if (isAdminActive)
+                    MaterialTheme.colorScheme.primary
+                else
+                    MaterialTheme.colorScheme.onSurfaceVariant
+            )
 
-            // Toggle service
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // ── Tombol Accessibility ──────────────────────────
             Button(
                 onClick = {
-                    isServiceEnabled = !isServiceEnabled
-                    prefManager.setServiceEnabled(isServiceEnabled)
+                    if (!isAccessibilityEnabled) {
+                        AccessibilityUtils.openAccessibilitySettings(context)
+                    } else {
+                        isServiceEnabled = !isServiceEnabled
+                        prefManager.setServiceEnabled(isServiceEnabled)
+                    }
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
+                modifier = Modifier.fillMaxWidth().height(56.dp)
             ) {
-                Text(if (isServiceEnabled) "Nonaktifkan Layanan" else "Aktifkan Layanan")
+                Text(
+                    when {
+                        !isAccessibilityEnabled -> "Aktifkan Accessibility Service →"
+                        isServiceEnabled -> "Nonaktifkan Layanan"
+                        else -> "Aktifkan Layanan"
+                    }
+                )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
-            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
-            // Whitelist — Minggu 3
+            // ── Whitelist ─────────────────────────────────────
             OutlinedButton(
-                onClick = { /* TODO: navigasi ke WhitelistScreen */ },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp)
+                onClick = onWhitelistClick,
+                modifier = Modifier.fillMaxWidth().height(52.dp)
             ) {
                 Text("Aplikasi yang Dipantau")
             }
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Log — Minggu 7
+            // ── Log ───────────────────────────────────────────
             OutlinedButton(
-                onClick = { /* TODO: navigasi ke LogScreen */ },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp)
+                onClick = onLogClick,
+                modifier = Modifier.fillMaxWidth().height(52.dp)
             ) {
                 Text("Riwayat Deteksi")
             }
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Ubah PIN — Minggu 8
+            // ── Ubah PIN ──────────────────────────────────────
             OutlinedButton(
-                onClick = { /* TODO: navigasi ke ChangePinScreen */ },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp)
+                onClick = onChangePinClick,
+                modifier = Modifier.fillMaxWidth().height(52.dp)
             ) {
                 Text("Ubah PIN")
             }
 
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // ── Device Admin ──────────────────────────────────
+            OutlinedButton(
+                onClick = {
+                    if (!isAdminActive) {
+                        val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {
+                            putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, adminComponent)
+                            putExtra(
+                                DevicePolicyManager.EXTRA_ADD_EXPLANATION,
+                                "Aktifkan untuk mencegah aplikasi diuninstall oleh anak."
+                            )
+                        }
+                        context.startActivity(intent)
+                    }
+                },
+                modifier = Modifier.fillMaxWidth().height(52.dp)
+            ) {
+                Text(if (isAdminActive) "Proteksi Uninstall: Aktif ✓" else "Aktifkan Anti-Uninstall")
+            }
+
             Spacer(modifier = Modifier.weight(1f))
 
-            // Logout
+            // ── Logout ────────────────────────────────────────
             OutlinedButton(
                 onClick = onLogout,
                 colors = ButtonDefaults.outlinedButtonColors(
                     contentColor = MaterialTheme.colorScheme.error
                 ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp)
+                modifier = Modifier.fillMaxWidth().height(52.dp)
             ) {
                 Text("Keluar")
             }
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun ParentDashboardScreenPreview() {
-    val context = LocalContext.current
-    val prefManager = PreferencesManager(context)
-    ParentalWatchTheme {
-        ParentDashboardScreen(
-            prefManager = prefManager,
-            onLogout = {}
-        )
     }
 }

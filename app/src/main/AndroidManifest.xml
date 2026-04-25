@@ -1,45 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.parental_watch"
     xmlns:tools="http://schemas.android.com/tools">
-    <!--For Overlay    -->
+
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
-
-    <!--For Accesibility Service    -->
-    <uses-permission android:name="android.permission.BIND_ACCESSIBILITY_SERVICE"
-        tools:ignore="ProtectedPermissions"/>
-
-    <!--For Device Admin    -->
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-
-    <!--For internet    -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:allowBackup="true"
-        android:dataExtractionRules="@xml/data_extraction_rules"
-        android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Parentalwatch">
-        <!-- Halaman utama -->
+        android:theme="@style/Theme.ParentalWatch"
+        android:usesCleartextTraffic="true">
+
+        <!-- usesCleartextTraffic=true untuk HTTP ke server lokal (laptop) -->
+        <!-- Di produksi harus diganti HTTPS -->
+
         <activity
             android:name=".ui.MainActivity"
-            android:exported="true"
-            android:label="@string/app_name"
-            android:theme="@style/Theme.Parentalwatch">
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".PinSetupActivity" android:exported="false" />
-        <activity android:name=".ParentLoginActivity" android:exported="false" />
-        <activity android:name=".ParentDashboardActivity" android:exported="false" />
-        <activity android:name=".ChildModeActivity" android:exported="false" />
 
         <!-- Accessibility Service -->
         <service
@@ -55,6 +41,19 @@
                 android:name="android.accessibilityservice"
                 android:resource="@xml/accessibility_service" />
         </service>
+
+        <!-- Device Admin Receiver -->
+        <receiver
+            android:name=".service.ParentalDeviceAdminReceiver"
+            android:exported="true"
+            android:permission="android.permission.BIND_DEVICE_ADMIN">
+            <meta-data
+                android:name="android.app.device_admin"
+                android:resource="@xml/device_admin" />
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+            </intent-filter>
+        </receiver>
 
     </application>
 
