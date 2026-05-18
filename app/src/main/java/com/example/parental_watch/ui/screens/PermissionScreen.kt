@@ -25,10 +25,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.example.parental_watch.ui.theme.ParentalWatchTheme
 
 @Composable
 fun PermissionScreen(onPermissionGranted: () -> Unit) {
@@ -110,5 +112,13 @@ fun PermissionScreen(onPermissionGranted: () -> Unit) {
                 Text("Lewati (fitur sensor tidak aktif)")
             }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PermissionScreenPreview() {
+    ParentalWatchTheme {
+        PermissionScreen(onPermissionGranted = {})
     }
 }

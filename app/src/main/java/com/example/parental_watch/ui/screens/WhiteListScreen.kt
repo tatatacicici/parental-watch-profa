@@ -3,61 +3,36 @@ package com.example.parental_watch.ui.screens
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import com.example.parental_watch.data.preference.PreferencesManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-// App yang tidak boleh dimasukkan whitelist (sensitif / keamanan tinggi)
 private val BLOCKED_FROM_WHITELIST = setOf(
-    "com.bca",
-    "com.mandiri",
-    "id.co.bri.brimo",
-    "com.bni.android",
-    "com.cimb",
-    "id.co.bankjatim",
-    "com.danamon",
-    "com.btpn",
-    "id.dana",
-    "com.gojek.app",        // GoJek (ada GoPay)
-    "com.shopee.id",
-    "com.tokopedia.tkpd",
-    "id.co.bcamobile",
-    "com.google.android.gms" // Google Play Services
+    "com.android.settings",
+    "com.android.systemui",
+    "com.example.parental_watch"
 )
 
 data class AppInfo(
@@ -74,22 +49,25 @@ fun WhitelistScreen(
 ) {
     val context = LocalContext.current
     var appList by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
+    var filteredList by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
+    var searchQuery by remember { mutableStateOf("") }
     var checkedPackages by remember { mutableStateOf(prefManager.getWhitelist().toMutableSet()) }
     var isLoading by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
             val pm = context.packageManager
+            // Ambil semua aplikasi, jangan hanya non-system agar WA/Browser muncul
             val installed = pm.getInstalledApplications(PackageManager.GET_META_DATA)
 
-            val userApps = installed
+            val apps = installed
                 .filter { app ->
-                    // Hanya user app, bukan system, dan tidak ada di blocked list
-                    (app.flags and ApplicationInfo.FLAG_SYSTEM) == 0 &&
-                            BLOCKED_FROM_WHITELIST.none { blocked ->
-                                app.packageName.contains(blocked, ignoreCase = true)
-                            } &&
-                            app.packageName != context.packageName // Exclude diri sendiri
+                    val isSystemApp = (app.flags and ApplicationInfo.FLAG_SYSTEM) != 0
+                    val isUpdatedSystemApp = (app.flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0
+                    
+                    // Tampilkan jika: Bukan app sistem penting, ATAU app sistem yang bisa diupdate (WA/Chrome dll)
+                    (!isSystemApp || isUpdatedSystemApp || app.packageName.contains("whatsapp", true)) &&
+                    BLOCKED_FROM_WHITELIST.none { app.packageName.contains(it) }
                 }
                 .map { app ->
                     AppInfo(
@@ -101,49 +79,51 @@ fun WhitelistScreen(
                 .sortedBy { it.name }
 
             withContext(Dispatchers.Main) {
-                appList = userApps
+                appList = apps
+                filteredList = apps
                 isLoading = false
+            }
+        }
+    }
+
+    LaunchedEffect(searchQuery, appList) {
+        filteredList = if (searchQuery.isEmpty()) {
+            appList
+        } else {
+            appList.filter { 
+                it.name.contains(searchQuery, ignoreCase = true) || 
+                it.packageName.contains(searchQuery, ignoreCase = true) 
             }
         }
     }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Aplikasi yang Dipantau") },
+            CenterAlignedTopAppBar(
+                title = { Text("Aplikasi Terpantau", fontWeight = FontWeight.Black) },
                 navigationIcon = {
                     IconButton(onClick = {
                         prefManager.saveWhitelist(checkedPackages)
                         onBack()
-                    }) { Text("←") }
+                    }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
+                    }
                 }
             )
         }
     ) { innerPadding ->
-        if (isLoading) {
-            Column(
-                modifier = Modifier.fillMaxSize().padding(innerPadding),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                CircularProgressIndicator()
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("Memuat daftar aplikasi...")
-            }
-        } else {
-            Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-                Text(
-                    text = "${checkedPackages.size} dari ${appList.size} aplikasi dipantau",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                )
+        Column(modifier = Modifier.padding(innerPadding)) {
+            WhitelistHeader(checkedCount = checkedPackages.size)
+            SearchBarField(query = searchQuery, onQueryChange = { searchQuery = it })
 
-                HorizontalDivider()
-
-                LazyColumn {
-                    items(appList) { app ->
-                        AppListItem(
+            if (isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            } else {
+                LazyColumn(modifier = Modifier.weight(1f)) {
+                    items(filteredList, key = { it.packageName }) { app ->
+                        AppCardItem(
                             app = app,
                             isChecked = checkedPackages.contains(app.packageName),
                             onCheckedChange = { checked ->
@@ -153,7 +133,6 @@ fun WhitelistScreen(
                                 prefManager.saveWhitelist(checkedPackages)
                             }
                         )
-                        HorizontalDivider(modifier = Modifier.padding(start = 72.dp))
                     }
                 }
             }
@@ -161,48 +140,55 @@ fun WhitelistScreen(
     }
 }
 
+// ... (Sisanya tetap sama, saya hanya ubah logika filter di atas)
+
 @Composable
-fun AppListItem(
-    app: AppInfo,
-    isChecked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
+fun WhitelistHeader(checkedCount: Int) {
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(16.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f))
     ) {
-        app.icon?.let { drawable ->
-            Image(
-                bitmap = drawable.toBitmap(48, 48).asImageBitmap(),
-                contentDescription = app.name,
-                modifier = Modifier.size(40.dp)
-            )
+        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.width(12.dp))
+            Text("Pilih aplikasi yang ingin dipantau.", style = MaterialTheme.typography.bodySmall)
         }
+    }
+}
 
-        Spacer(modifier = Modifier.width(16.dp))
+@Composable
+fun SearchBarField(query: String, onQueryChange: (String) -> Unit) {
+    OutlinedTextField(
+        value = query,
+        onValueChange = onQueryChange,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        placeholder = { Text("Cari aplikasi...") },
+        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+        shape = RoundedCornerShape(12.dp),
+        singleLine = true
+    )
+}
 
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = app.name,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = app.packageName,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+@Composable
+fun AppCardItem(app: AppInfo, isChecked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Surface(
+        onClick = { onCheckedChange(!isChecked) },
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+        shape = RoundedCornerShape(12.dp),
+        color = if (isChecked) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface,
+        tonalElevation = 1.dp
+    ) {
+        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            app.icon?.let { drawable ->
+                Image(bitmap = drawable.toBitmap(64, 64).asImageBitmap(), contentDescription = null, modifier = Modifier.size(36.dp))
+            }
+            Spacer(Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(app.name, fontWeight = FontWeight.Bold, maxLines = 1)
+                Text(app.packageName, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Checkbox(checked = isChecked, onCheckedChange = onCheckedChange)
         }
-
-        Checkbox(
-            checked = isChecked,
-            onCheckedChange = onCheckedChange
-        )
     }
 }

@@ -10,4 +10,5 @@ object Routes {
     const val WHITELIST = "whitelist"
     const val LOG = "log"
     const val CHANGE_PIN = "change_pin"
+    const val FORGOT_PASSWORD = "forgot_password"
 }

@@ -4,73 +4,56 @@ import android.content.Context
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.Rect
+import android.util.Log
+import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
-import android.view.accessibility.AccessibilityNodeInfo
 
-/**
- * OverlayManager — menggambar kotak hitam di atas teks yang terdeteksi kasar.
- *
- * Cara kerja:
- * 1. Ambil koordinat node (posisi teks di layar)
- * 2. Buat View kotak hitam dengan ukuran yang sama
- * 3. Tampilkan via WindowManager di atas semua aplikasi
- *
- * Butuh permission SYSTEM_ALERT_WINDOW yang di-grant manual oleh user.
- */
 class OverlayManager(private val context: Context) {
 
     private val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-
     private val activeOverlays = mutableListOf<View>()
+    private val TAG = "ParentalWatch_Overlay"
 
-    fun showOverlay(node: AccessibilityNodeInfo){
-        //take node on screen
-        val bounds =  Rect()
-        node.getBoundsInScreen(bounds)
-
-        if(bounds.width() <= 0 || bounds.height() <= 0) return
+    fun showOverlay(bounds: Rect) {
+        if (bounds.width() <= 0 || bounds.height() <= 0) return
 
         val overlayView = View(context).apply {
-            setBackgroundColor(Color.BLACK)
-            tag = node.hashCode()
+            // PAKAI MERAH TERANG AGAR TERLIHAT SAAT TESTING
+            setBackgroundColor(Color.RED)
+            alpha = 0.7f
         }
 
+        // Konfigurasi Window agar presisi di seluruh layar (Full Screen)
         val params = WindowManager.LayoutParams(
             bounds.width(),
             bounds.height(),
-            bounds.left,
-            bounds.top,
             WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             PixelFormat.TRANSLUCENT
-        )
+        ).apply {
+            gravity = Gravity.TOP or Gravity.START
+            x = bounds.left
+            y = bounds.top
+        }
 
-        try{
+        try {
             windowManager.addView(overlayView, params)
             activeOverlays.add(overlayView)
-        }catch (e: Exception){
-            e.printStackTrace()
+            Log.d(TAG, "✓ Overlay muncul di: x=${bounds.left}, y=${bounds.top}")
+        } catch (e: Exception) {
+            Log.e(TAG, "✗ Gagal addView: ${e.message}")
         }
     }
 
-    fun removeAllOverlays(){
-        for(view in activeOverlays){
-            try{
-                windowManager.removeView(view)
-            }catch (e: Exception){
-                e.printStackTrace()
-            }
-        }
+    fun removeAllOverlays() {
+        val views = ArrayList(activeOverlays)
         activeOverlays.clear()
+        views.forEach { 
+            try { windowManager.removeView(it) } catch (e: Exception) {}
+        }
     }
-
-    fun refreshOverlays(){
-        // Dipanggil saat user scroll — hapus overlay lama
-        // Service akan regenerate overlay untuk posisi baru
-        removeAllOverlays()
-    }
-
 }

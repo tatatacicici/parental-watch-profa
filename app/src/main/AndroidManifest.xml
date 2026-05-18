@@ -2,9 +2,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Izin untuk menggambar di atas aplikasi lain -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- PENTING: Izin untuk melihat semua aplikasi yang terinstal (Android 11+) -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
 
     <application
         android:allowBackup="true"
@@ -14,9 +19,6 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.ParentalWatch"
         android:usesCleartextTraffic="true">
-
-        <!-- usesCleartextTraffic=true untuk HTTP ke server lokal (laptop) -->
-        <!-- Di produksi harus diganti HTTPS -->
 
         <activity
             android:name=".ui.MainActivity"

@@ -1,7 +1,6 @@
 package com.example.parental_watch.ui
 
 import android.os.Bundle
-import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -12,6 +11,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.parental_watch.data.preference.PreferencesManager
 import com.example.parental_watch.ui.screens.ChangePinScreen
 import com.example.parental_watch.ui.screens.ChildModeScreen
+import com.example.parental_watch.ui.screens.ForgotPasswordScreen
 import com.example.parental_watch.ui.screens.HomeScreen
 import com.example.parental_watch.ui.screens.LogScreen
 import com.example.parental_watch.ui.screens.ParentDashboardScreen
@@ -90,6 +90,22 @@ fun AppNavigation(prefManager: PreferencesManager) {
                 onLoginSuccess = {
                     navController.navigate(Routes.PARENT_DASHBOARD) {
                         popUpTo(Routes.HOME) { inclusive = false }
+                    }
+                },
+                onForgotPasswordClick = {
+                    navController.navigate(Routes.FORGOT_PASSWORD)
+                }
+            )
+        }
+
+        // ── Forgot Password ───────────────────────────────────
+        composable(Routes.FORGOT_PASSWORD) {
+            ForgotPasswordScreen(
+                prefManager = prefManager,
+                onBack = { navController.popBackStack() },
+                onResetSuccess = {
+                    navController.navigate(Routes.PARENT_LOGIN) {
+                        popUpTo(Routes.FORGOT_PASSWORD) { inclusive = true }
                     }
                 }
             )

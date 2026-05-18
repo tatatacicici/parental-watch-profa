@@ -30,6 +30,24 @@ class PreferencesManager(context: Context) {
         return hashBytes.joinToString("") { "%02x".format(it) }
     }
 
+    // ── Challenge / Security Question ──────────────────────────
+
+    fun saveSecurityQuestion(question: String, answer: String) {
+        prefs.edit()
+            .putString(KEY_SECURITY_QUESTION, question)
+            .putString(KEY_SECURITY_ANSWER_HASH, hashPin(answer.lowercase().trim()))
+            .apply()
+    }
+
+    fun getSecurityQuestion(): String? {
+        return prefs.getString(KEY_SECURITY_QUESTION, null)
+    }
+
+    fun validateSecurityAnswer(answer: String): Boolean {
+        val savedHash = prefs.getString(KEY_SECURITY_ANSWER_HASH, null) ?: return false
+        return savedHash == hashPin(answer.lowercase().trim())
+    }
+
     // ── Whitelist Aplikasi ────────────────────────────────────
 
     fun saveWhitelist(packageNames: Set<String>) {
@@ -59,5 +77,7 @@ class PreferencesManager(context: Context) {
         private const val KEY_PIN_HASH = "pin_hash"
         private const val KEY_WHITELIST = "whitelist"
         private const val KEY_SERVICE_ENABLED = "service_enabled"
+        private const val KEY_SECURITY_QUESTION = "security_question"
+        private const val KEY_SECURITY_ANSWER_HASH = "security_answer_hash"
     }
 }
