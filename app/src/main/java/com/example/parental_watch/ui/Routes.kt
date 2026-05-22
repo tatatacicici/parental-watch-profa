@@ -11,4 +11,24 @@ object Routes {
     const val LOG = "log"
     const val CHANGE_PIN = "change_pin"
     const val FORGOT_PASSWORD = "forgot_password"
+
+    // Fitur YouTube wrapper
+    const val SEARCH = "search"
+    const val VIDEO_CHECK = "video_check/{videoId}/{title}/{channelTitle}/{thumbnailUrl}"
+    const val PLAYER = "player/{videoId}/{title}"
+    const val BLOCK = "block/{videoId}/{title}/{reason}/{ratio}"
+    const val VIDEO_HISTORY = "video_history"
+
+    // Helper untuk build route dengan argument
+    fun videoCheck(videoId: String, title: String, channelTitle: String, thumbnailUrl: String) =
+        "video_check/$videoId/${encode(title)}/${encode(channelTitle)}/${encode(thumbnailUrl)}"
+
+    fun player(videoId: String, title: String) =
+        "player/$videoId/${encode(title)}"
+
+    fun block(videoId: String, title: String, reason: String, ratio: Float) =
+        "block/$videoId/${encode(title)}/${encode(reason)}/$ratio"
+
+    private fun encode(value: String) =
+        java.net.URLEncoder.encode(value, "UTF-8")
 }

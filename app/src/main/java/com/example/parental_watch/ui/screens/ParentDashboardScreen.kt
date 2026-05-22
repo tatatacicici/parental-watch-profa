@@ -43,18 +43,18 @@ fun ParentDashboardScreen(
     onLogout: () -> Unit,
     onWhitelistClick: () -> Unit,
     onLogClick: () -> Unit,
-    onChangePinClick: () -> Unit
+    onChangePinClick: () -> Unit,
+    onVideoHistoryClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val isPreview = LocalInspectionMode.current
 
+    // KOMPONEN AKSESIBILITAS DINONAKTIFKAN
+    /*
     var isServiceEnabled by remember { mutableStateOf(prefManager.isServiceEnabled()) }
-    var isAccessibilityEnabled by remember {
-        mutableStateOf(
-            if (isPreview) false else AccessibilityUtils.isAccessibilityServiceEnabled(context)
-        )
-    }
+    var isAccessibilityEnabled by remember { mutableStateOf(true) }
+    */
 
     val devicePolicyManager = remember(context) {
         if (isPreview) null else context.getSystemService(DevicePolicyManager::class.java)
@@ -73,8 +73,6 @@ fun ParentDashboardScreen(
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                isAccessibilityEnabled =
-                    if (isPreview) false else AccessibilityUtils.isAccessibilityServiceEnabled(context)
                 if (!isPreview && adminComponent != null) {
                     isAdminActive = devicePolicyManager?.isAdminActive(adminComponent) ?: false
                 }
@@ -117,30 +115,28 @@ fun ParentDashboardScreen(
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // --- 1. Visual Security Header (Urutan Kepentingan) ---
-            val allActive = isServiceEnabled && isAccessibilityEnabled && isAdminActive
-            SecurityStatusHeader(allActive = allActive)
+            // --- 1. Visual Security Header ---
+            // val allActive = isServiceEnabled && isAccessibilityEnabled && isAdminActive
+            SecurityStatusHeader(allActive = isAdminActive) // Menggunakan isAdminActive sebagai indikator keamanan utama
 
-            // --- 2. Service Control with Pulse Animation (Feedback) ---
+            /* --- 2. Service Control Card (Aksesibilitas) ---
             ServiceControlCard(
                 isRunning = isServiceEnabled && isAccessibilityEnabled,
                 isAccessibilityEnabled = isAccessibilityEnabled,
                 onClick = {
-                    if (!isAccessibilityEnabled) {
-                        AccessibilityUtils.openAccessibilitySettings(context)
-                    } else {
-                        isServiceEnabled = !isServiceEnabled
-                        prefManager.setServiceEnabled(isServiceEnabled)
-                    }
+                    isServiceEnabled = !isServiceEnabled
+                    prefManager.setServiceEnabled(isServiceEnabled)
                 }
             )
+            */
 
-            // --- Mini Status Summary ---
+            /* --- Mini Status Summary ---
             StatusSummaryRow(
                 isAccessibilityEnabled = isAccessibilityEnabled,
                 isServiceEnabled = isServiceEnabled,
                 isAdminActive = isAdminActive
             )
+            */
 
             HorizontalDivider(
                 modifier = Modifier.padding(vertical = 8.dp),
@@ -155,7 +151,7 @@ fun ParentDashboardScreen(
                 modifier = Modifier.padding(bottom = 4.dp)
             )
 
-            // --- 3. Menu Items with Preview Data (Cognitive Load Reduction) ---
+            /* --- 3. Menu Items (Aksesibilitas/Monitoring) ---
             val whitelistCount = prefManager.getWhitelist().size
             DashboardMenuItem(
                 title = "Aplikasi yang Dipantau",
@@ -171,6 +167,15 @@ fun ParentDashboardScreen(
                 icon = Icons.Default.Info,
                 previewText = "Lihat Log",
                 onClick = onLogClick
+            )
+            */
+
+            DashboardMenuItem(
+                title = "Riwayat Video YouTube",
+                subtitle = "Pantau video yang ditonton & diblokir",
+                icon = Icons.Default.PlayArrow,
+                previewText = "Lihat",
+                onClick = onVideoHistoryClick
             )
 
             DashboardMenuItem(
@@ -234,7 +239,7 @@ fun SecurityStatusHeader(allActive: Boolean) {
                     color = contentColor
                 )
                 Text(
-                    text = if (allActive) "Semua fitur pengawasan aktif" else "Selesaikan setup untuk keamanan maksimal",
+                    text = if (allActive) "Anti-uninstall aktif" else "Aktifkan Anti-uninstall untuk keamanan maksimal",
                     style = MaterialTheme.typography.bodyMedium,
                     color = contentColor.copy(alpha = 0.8f)
                 )
@@ -253,7 +258,7 @@ fun StatusSummaryRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
-        MiniStatusIndicator(label = "Akses", isActive = isAccessibilityEnabled)
+        // MiniStatusIndicator(label = "Akses", isActive = isAccessibilityEnabled)
         MiniStatusIndicator(label = "Monitoring", isActive = isServiceEnabled && isAccessibilityEnabled)
         MiniStatusIndicator(label = "Anti-Uninst", isActive = isAdminActive)
     }
@@ -284,7 +289,6 @@ fun ServiceControlCard(
     onClick: () -> Unit
 ) {
     val containerColor = when {
-        !isAccessibilityEnabled -> MaterialTheme.colorScheme.error
         isRunning -> Color(0xFF2E7D32)
         else -> MaterialTheme.colorScheme.primary
     }
@@ -308,8 +312,7 @@ fun ServiceControlCard(
             }
             
             Icon(
-                imageVector = if (!isAccessibilityEnabled) Icons.Default.Warning 
-                              else if (isRunning) Icons.Default.CheckCircle 
+                imageVector = if (isRunning) Icons.Default.CheckCircle 
                               else Icons.Default.PlayArrow,
                 contentDescription = null,
                 tint = Color.White,
@@ -318,7 +321,6 @@ fun ServiceControlCard(
             Spacer(Modifier.width(16.dp))
             Text(
                 text = when {
-                    !isAccessibilityEnabled -> "Setup Aksesibilitas"
                     isRunning -> "Layanan Aktif & Berjalan"
                     else -> "Mulai Pengawasan"
                 },
@@ -449,7 +451,8 @@ fun ParentDashboardScreenPreview() {
             onLogout = {},
             onWhitelistClick = {},
             onLogClick = {},
-            onChangePinClick = {}
+            onChangePinClick = {},
+            onVideoHistoryClick = {}
         )
     }
 }

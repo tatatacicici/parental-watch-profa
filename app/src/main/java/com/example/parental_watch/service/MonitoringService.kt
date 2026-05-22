@@ -44,8 +44,10 @@ class MonitoringService : AccessibilityService() {
 
         serviceInfo = AccessibilityServiceInfo().apply {
             // Mode Layar Saja: Fokus pada perubahan jendela agar tidak berat saat mengetik
+            // Perubahan 1: tambah TYPE_VIEW_SCROLLED
             eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
-                    AccessibilityEvent.TYPE_WINDOWS_CHANGED
+                    AccessibilityEvent.TYPE_WINDOWS_CHANGED or
+                    AccessibilityEvent.TYPE_VIEW_SCROLLED
             
             flags = AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS or
                     AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS or
@@ -67,8 +69,12 @@ class MonitoringService : AccessibilityService() {
 
         if (!prefManager.isServiceEnabled() || !prefManager.isAppWhitelisted(packageName)) return
 
-        // Perubahan 1: Remove overlay SEGERA saat event masuk — sebelum debounce
-        overlayManager.removeAllOverlays()
+        // Perubahan 2: Deteksi scroll → hapus overlay segera, hanya untuk WA
+        if (event.eventType == AccessibilityEvent.TYPE_VIEW_SCROLLED &&
+            packageName == "com.whatsapp") {
+            overlayManager.removeAllOverlays()
+            Log.d(TAG, "Scroll detected → overlay cleared")
+        }
 
         // Debounce HANYA untuk pengambilan teks di Main Thread
         debounceJob?.cancel()
@@ -213,7 +219,7 @@ class MonitoringService : AccessibilityService() {
                         text.matches(Regex("""\d+\s?dtk""")) // "20 dtk"
 
                 val shouldSkip = isTimestamp || isFileSize || isFileExtension ||
-                        isDateSeparator || iisDayLabel || isFilename ||
+                        isDateSeparator || isDayLabel || isFilename ||
                         isDeliveryStatus || isTooShort || isURL ||
                         isPreviewSender || isBadge || isAccessibilityHint ||
                         isSearchBar || isDateFormat || isDiteruskan || isCallLog
@@ -253,7 +259,6 @@ class MonitoringService : AccessibilityService() {
         }
     }
 
-    // Perubahan 3: Ganti seluruh runClassification
     private suspend fun runClassification(
         textDataList: List<TextData>,
         packageName: String,

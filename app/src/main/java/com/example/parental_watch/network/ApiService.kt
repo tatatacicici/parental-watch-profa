@@ -13,7 +13,17 @@ data class ClassifyResponse(
     val isOffensive: Boolean
 )
 
+// Tambah ini untuk batch
+data class BatchClassifyRequest(val texts: List<String>)
+
+data class BatchClassifyResponse(
+    val results: List<ClassifyResponse>
+)
+
 interface ApiService {
     @POST("classify")
     suspend fun classify(@Body request: ClassifyRequest): ClassifyResponse
+
+    @POST("classify-batch")
+    suspend fun classifyBatch(@Body request: BatchClassifyRequest): BatchClassifyResponse
 }

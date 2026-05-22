@@ -3,13 +3,14 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Izin untuk menggambar di atas aplikasi lain -->
-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+<!--    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />-->
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+<!--    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />-->
 
     <!-- PENTING: Izin untuk melihat semua aplikasi yang terinstal (Android 11+) -->
-    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
-        tools:ignore="QueryAllPackagesPermission" />
+<!--    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"-->
+<!--        tools:ignore="QueryAllPackagesPermission" />-->
 
     <application
         android:allowBackup="true"
@@ -29,7 +30,7 @@
             </intent-filter>
         </activity>
 
-        <!-- Accessibility Service -->
+        <!-- Accessibility Service DINONAKTIFKAN
         <service
             android:name=".service.MonitoringService"
             android:exported="true"
@@ -43,6 +44,7 @@
                 android:name="android.accessibilityservice"
                 android:resource="@xml/accessibility_service" />
         </service>
+        -->
 
         <!-- Device Admin Receiver -->
         <receiver

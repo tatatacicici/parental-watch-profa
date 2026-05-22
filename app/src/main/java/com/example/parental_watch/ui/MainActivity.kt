@@ -5,12 +5,17 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.parental_watch.data.preference.PreferencesManager
+import com.example.parental_watch.ui.dashboard.VideoHistoryScreen
+import com.example.parental_watch.ui.player.BlockScreen
+import com.example.parental_watch.ui.player.PlayerScreen
+import com.example.parental_watch.ui.player.VideoCheckScreen
 import com.example.parental_watch.ui.screens.ChangePinScreen
-import com.example.parental_watch.ui.screens.ChildModeScreen
 import com.example.parental_watch.ui.screens.ForgotPasswordScreen
 import com.example.parental_watch.ui.screens.HomeScreen
 import com.example.parental_watch.ui.screens.LogScreen
@@ -19,6 +24,7 @@ import com.example.parental_watch.ui.screens.ParentLoginScreen
 import com.example.parental_watch.ui.screens.PermissionScreen
 import com.example.parental_watch.ui.screens.PinSetupScreen
 import com.example.parental_watch.ui.screens.WhitelistScreen
+import com.example.parental_watch.ui.search.SearchScreen
 import com.example.parental_watch.ui.theme.ParentalWatchTheme
 
 class MainActivity : ComponentActivity() {
@@ -128,13 +134,133 @@ fun AppNavigation(prefManager: PreferencesManager) {
                 },
                 onChangePinClick = {
                     navController.navigate(Routes.CHANGE_PIN)
+                },
+                onVideoHistoryClick = {
+                    navController.navigate(Routes.VIDEO_HISTORY)
                 }
             )
         }
 
         // ── Child Mode ────────────────────────────────────────
         composable(Routes.CHILD_MODE) {
-            ChildModeScreen()
+            SearchScreen(
+                onVideoSelected = { video ->
+                    navController.navigate(
+                        Routes.videoCheck(
+                            videoId = video.videoId,
+                            title = video.title,
+                            channelTitle = video.channelTitle,
+                            thumbnailUrl = video.thumbnailUrl
+                        )
+                    )
+                },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = Routes.VIDEO_CHECK,
+            arguments = listOf(
+                navArgument("videoId") { type = NavType.StringType },
+                navArgument("title") { type = NavType.StringType },
+                navArgument("channelTitle") { type = NavType.StringType },
+                navArgument("thumbnailUrl") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val videoId = backStackEntry.arguments?.getString("videoId") ?: ""
+            val title = java.net.URLDecoder.decode(
+                backStackEntry.arguments?.getString("title") ?: "", "UTF-8"
+            )
+            val channelTitle = java.net.URLDecoder.decode(
+                backStackEntry.arguments?.getString("channelTitle") ?: "", "UTF-8"
+            )
+            val thumbnailUrl = java.net.URLDecoder.decode(
+                backStackEntry.arguments?.getString("thumbnailUrl") ?: "", "UTF-8"
+            )
+            VideoCheckScreen(
+                videoId = videoId,
+                title = title,
+                channelTitle = channelTitle,
+                thumbnailUrl = thumbnailUrl,
+                onApproved = { vid, ttl ->
+                    navController.navigate(Routes.player(vid, ttl)) {
+                        popUpTo(Routes.VIDEO_CHECK) { inclusive = true }
+                    }
+                },
+                onBlocked = { vid, ttl, reason, ratio ->
+                    navController.navigate(Routes.block(vid, ttl, reason, ratio)) {
+                        popUpTo(Routes.VIDEO_CHECK) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable(
+            route = Routes.PLAYER,
+            arguments = listOf(
+                navArgument("videoId") { type = NavType.StringType },
+                navArgument("title") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val videoId = backStackEntry.arguments?.getString("videoId") ?: ""
+            val title = java.net.URLDecoder.decode(
+                backStackEntry.arguments?.getString("title") ?: "", "UTF-8"
+            )
+            PlayerScreen(
+                videoId = videoId,
+                title = title,
+                onRelatedVideoClicked = { relatedVideoId ->
+                    navController.navigate(
+                        Routes.videoCheck(
+                            videoId = relatedVideoId,
+                            title = "",
+                            channelTitle = "",
+                            thumbnailUrl = ""
+                        )
+                    )
+                },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = Routes.BLOCK,
+            arguments = listOf(
+                navArgument("videoId") { type = NavType.StringType },
+                navArgument("title") { type = NavType.StringType },
+                navArgument("reason") { type = NavType.StringType },
+                navArgument("ratio") { type = NavType.FloatType }
+            )
+        ) { backStackEntry ->
+            val videoId = backStackEntry.arguments?.getString("videoId") ?: ""
+            val title = java.net.URLDecoder.decode(
+                backStackEntry.arguments?.getString("title") ?: "", "UTF-8"
+            )
+            val reason = java.net.URLDecoder.decode(
+                backStackEntry.arguments?.getString("reason") ?: "", "UTF-8"
+            )
+            val ratio = backStackEntry.arguments?.getFloat("ratio") ?: 0f
+            BlockScreen(
+                videoId = videoId,
+                title = title,
+                reason = reason,
+                ratio = ratio,
+                onRecommendationSelected = { video ->
+                    navController.navigate(
+                        Routes.videoCheck(
+                            videoId = video.videoId,
+                            title = video.title,
+                            channelTitle = video.channelTitle,
+                            thumbnailUrl = video.thumbnailUrl
+                        )
+                    )
+                },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Routes.VIDEO_HISTORY) {
+            VideoHistoryScreen(onBack = { navController.popBackStack() })
         }
 
         // ── Whitelist ─────────────────────────────────────────

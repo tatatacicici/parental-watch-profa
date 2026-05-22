@@ -51,7 +51,7 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     // Using string dependency to ensure it is correctly resolved
     implementation("androidx.compose.material:material-icons-extended")
-    
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -67,4 +67,10 @@ dependencies {
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+
+    // Coil untuk load thumbnail
+    implementation("io.coil-kt:coil-compose:2.4.0")
+    // Gson untuk serialize offensiveWords
+    implementation("com.google.code.gson:gson:2.10.1")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.0")
 }
