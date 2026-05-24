@@ -6,7 +6,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 object YoutubeApiClient {
     
     private const val BASE_URL = "https://www.googleapis.com/youtube/v3/"
-    const val API_KEY = "GANTI_DENGAN_API_KEY_KAMU"
+    const val API_KEY = "AIzaSyCt2v-Dij2PWPkYhwTKZImGISxidMZkZP8"
 
     val apiService: YoutubeApiService by lazy {
         Retrofit.Builder()

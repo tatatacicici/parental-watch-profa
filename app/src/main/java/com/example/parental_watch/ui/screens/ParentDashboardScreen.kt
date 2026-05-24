@@ -13,7 +13,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -31,10 +30,12 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.parental_watch.data.preference.PreferencesManager
 import com.example.parental_watch.service.ParentalDeviceAdminReceiver
+import com.example.parental_watch.ui.dashboard.DashboardState
+import com.example.parental_watch.ui.dashboard.DashboardViewModel
 import com.example.parental_watch.ui.theme.ParentalWatchTheme
-import com.example.parental_watch.utils.AccessibilityUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,17 +45,16 @@ fun ParentDashboardScreen(
     onWhitelistClick: () -> Unit,
     onLogClick: () -> Unit,
     onChangePinClick: () -> Unit,
-    onVideoHistoryClick: () -> Unit = {}
+    onVideoHistoryClick: () -> Unit = {},
+    onStudyScheduleClick: () -> Unit = {},
+    dashboardViewModel: DashboardViewModel = viewModel()
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val isPreview = LocalInspectionMode.current
-
-    // KOMPONEN AKSESIBILITAS DINONAKTIFKAN
-    /*
-    var isServiceEnabled by remember { mutableStateOf(prefManager.isServiceEnabled()) }
-    var isAccessibilityEnabled by remember { mutableStateOf(true) }
-    */
+    
+    val summary by dashboardViewModel.summary.collectAsState()
+    val historyState by dashboardViewModel.state.collectAsState()
 
     val devicePolicyManager = remember(context) {
         if (isPreview) null else context.getSystemService(DevicePolicyManager::class.java)
@@ -76,6 +76,7 @@ fun ParentDashboardScreen(
                 if (!isPreview && adminComponent != null) {
                     isAdminActive = devicePolicyManager?.isAdminActive(adminComponent) ?: false
                 }
+                dashboardViewModel.loadHistory()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -87,7 +88,7 @@ fun ParentDashboardScreen(
             CenterAlignedTopAppBar(
                 title = { 
                     Text(
-                        "Parental Dashboard",
+                        "Dashboard Orang Tua",
                         fontWeight = FontWeight.Black,
                         style = MaterialTheme.typography.titleLarge
                     ) 
@@ -115,28 +116,43 @@ fun ParentDashboardScreen(
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // --- 1. Visual Security Header ---
-            // val allActive = isServiceEnabled && isAccessibilityEnabled && isAdminActive
-            SecurityStatusHeader(allActive = isAdminActive) // Menggunakan isAdminActive sebagai indikator keamanan utama
+            // --- 1. Compact Security Header ---
+            SecurityStatusHeaderCompact(allActive = isAdminActive, context = context, adminComponent = adminComponent)
 
-            /* --- 2. Service Control Card (Aksesibilitas) ---
-            ServiceControlCard(
-                isRunning = isServiceEnabled && isAccessibilityEnabled,
-                isAccessibilityEnabled = isAccessibilityEnabled,
-                onClick = {
-                    isServiceEnabled = !isServiceEnabled
-                    prefManager.setServiceEnabled(isServiceEnabled)
-                }
+            // --- 2. Summary Cards ---
+            Text(
+                text = "Ringkasan Hari Ini",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.secondary,
+                fontWeight = FontWeight.Bold
             )
-            */
-
-            /* --- Mini Status Summary ---
-            StatusSummaryRow(
-                isAccessibilityEnabled = isAccessibilityEnabled,
-                isServiceEnabled = isServiceEnabled,
-                isAdminActive = isAdminActive
-            )
-            */
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                SummaryCard(
+                    label = "Ditonton",
+                    value = summary.watchedToday.toString(),
+                    icon = Icons.Default.PlayArrow,
+                    color = Color(0xFF42A5F5),
+                    modifier = Modifier.weight(1f)
+                )
+                SummaryCard(
+                    label = "Diblokir",
+                    value = summary.blockedToday.toString(),
+                    icon = Icons.Default.Block,
+                    color = Color(0xFFE53935),
+                    modifier = Modifier.weight(1f)
+                )
+                SummaryCard(
+                    label = "Jam Belajar",
+                    value = if (prefManager.isStudyTimeNow()) "Aktif" else "Nonaktif",
+                    icon = Icons.Default.School,
+                    color = if (prefManager.isStudyModeEnabled()) Color(0xFF43A047) else Color(0xFFFB8C00),
+                    modifier = Modifier.weight(1f)
+                )
+            }
 
             HorizontalDivider(
                 modifier = Modifier.padding(vertical = 8.dp),
@@ -151,45 +167,44 @@ fun ParentDashboardScreen(
                 modifier = Modifier.padding(bottom = 4.dp)
             )
 
-            /* --- 3. Menu Items (Aksesibilitas/Monitoring) ---
-            val whitelistCount = prefManager.getWhitelist().size
-            DashboardMenuItem(
-                title = "Aplikasi yang Dipantau",
-                subtitle = "Kelola daftar aplikasi yang diawasi",
-                icon = Icons.AutoMirrored.Filled.List,
-                previewText = if (whitelistCount > 0) "$whitelistCount Aplikasi" else "Belum ada",
-                onClick = onWhitelistClick
-            )
-
-            DashboardMenuItem(
-                title = "Riwayat Deteksi",
-                subtitle = "Lihat log aktivitas yang diblokir",
-                icon = Icons.Default.Info,
-                previewText = "Lihat Log",
-                onClick = onLogClick
-            )
-            */
+            val totalActivities = if (historyState is DashboardState.Success) {
+                (historyState as DashboardState.Success).history.size
+            } else 0
 
             DashboardMenuItem(
                 title = "Riwayat Video YouTube",
                 subtitle = "Pantau video yang ditonton & diblokir",
                 icon = Icons.Default.PlayArrow,
-                previewText = "Lihat",
+                previewText = if (totalActivities > 0) "$totalActivities aktivitas" else "Lihat",
                 onClick = onVideoHistoryClick
             )
 
             DashboardMenuItem(
-                title = "Keamanan PIN",
+                title = "Jam Belajar",
+                subtitle = if (prefManager.isStudyModeEnabled()) {
+                    "Aktif: ${prefManager.getStudyScheduleText()}"
+                } else {
+                    "Atur waktu pembatasan video"
+                },
+                icon = Icons.Default.DateRange,
+                previewText = if (prefManager.isStudyModeEnabled()) "Aktif" else "Nonaktif",
+                onClick = onStudyScheduleClick
+            )
+
+            DashboardMenuItem(
+                title = "Perbarui PIN",
                 subtitle = "Ubah kode akses orang tua",
                 icon = Icons.Default.Lock,
+                previewText = "Aktif",
                 onClick = onChangePinClick
             )
 
             DashboardMenuItem(
                 title = "Anti-Uninstall",
-                subtitle = if (isAdminActive) "Aktif" else "Ketuk untuk aktifkan",
+                subtitle = if (isAdminActive) "Layanan aktif" else "Mencegah aplikasi dihapus",
                 icon = Icons.Default.Settings,
                 highlight = !isAdminActive,
+                previewText = if (isAdminActive) "Aktif" else "Belum aktif",
                 onClick = {
                     if (!isAdminActive && adminComponent != null) {
                         val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {
@@ -210,163 +225,93 @@ fun ParentDashboardScreen(
 }
 
 @Composable
-fun SecurityStatusHeader(allActive: Boolean) {
-    val bgColor = if (allActive) Color(0xFFE8F5E9) else MaterialTheme.colorScheme.surfaceVariant
-    val contentColor = if (allActive) Color(0xFF2E7D32) else MaterialTheme.colorScheme.onSurfaceVariant
+fun SummaryCard(
+    label: String,
+    value: String,
+    icon: ImageVector,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.15f))
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = color,
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Black,
+                color = color
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+fun SecurityStatusHeaderCompact(
+    allActive: Boolean,
+    context: android.content.Context,
+    adminComponent: ComponentName?
+) {
+    val bgColor = if (allActive) Color(0xFFE8F5E9) else Color(0xFFFFF3E0)
+    val contentColor = if (allActive) Color(0xFF2E7D32) else Color(0xFFE65100)
     val icon = if (allActive) Icons.Default.CheckCircle else Icons.Default.Warning
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = bgColor)
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = bgColor),
+        onClick = {
+            if (!allActive && adminComponent != null) {
+                val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {
+                    putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, adminComponent)
+                }
+                context.startActivity(intent)
+            }
+        }
     ) {
         Row(
-            modifier = Modifier.padding(24.dp),
+            modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
                 tint = contentColor,
-                modifier = Modifier.size(48.dp)
+                modifier = Modifier.size(32.dp)
             )
-            Spacer(Modifier.width(20.dp))
+            Spacer(Modifier.width(16.dp))
             Column {
                 Text(
-                    text = if (allActive) "Sistem Terlindungi" else "Proteksi Belum Lengkap",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.ExtraBold,
+                    text = if (allActive) "Sistem Terlindungi" else "Status Proteksi",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
                     color = contentColor
                 )
                 Text(
-                    text = if (allActive) "Anti-uninstall aktif" else "Aktifkan Anti-uninstall untuk keamanan maksimal",
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = if (allActive) "Anti-uninstall aktif" else "Anti-uninstall belum aktif",
+                    style = MaterialTheme.typography.bodySmall,
                     color = contentColor.copy(alpha = 0.8f)
                 )
             }
         }
-    }
-}
-
-@Composable
-fun StatusSummaryRow(
-    isAccessibilityEnabled: Boolean,
-    isServiceEnabled: Boolean,
-    isAdminActive: Boolean
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly
-    ) {
-        // MiniStatusIndicator(label = "Akses", isActive = isAccessibilityEnabled)
-        MiniStatusIndicator(label = "Monitoring", isActive = isServiceEnabled && isAccessibilityEnabled)
-        MiniStatusIndicator(label = "Anti-Uninst", isActive = isAdminActive)
-    }
-}
-
-@Composable
-fun MiniStatusIndicator(label: String, isActive: Boolean) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            modifier = Modifier
-                .size(8.dp)
-                .clip(CircleShape)
-                .background(if (isActive) Color(0xFF4CAF50) else Color.LightGray)
-        )
-        Spacer(Modifier.width(6.dp))
-        Text(
-            text = label, 
-            style = MaterialTheme.typography.labelSmall, 
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-@Composable
-fun ServiceControlCard(
-    isRunning: Boolean,
-    isAccessibilityEnabled: Boolean,
-    onClick: () -> Unit
-) {
-    val containerColor = when {
-        isRunning -> Color(0xFF2E7D32)
-        else -> MaterialTheme.colorScheme.primary
-    }
-
-    Surface(
-        onClick = onClick,
-        shape = RoundedCornerShape(20.dp),
-        color = containerColor,
-        tonalElevation = 6.dp,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier
-                .padding(vertical = 24.dp, horizontal = 24.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            if (isRunning) {
-                PulseIndicator()
-                Spacer(Modifier.width(12.dp))
-            }
-            
-            Icon(
-                imageVector = if (isRunning) Icons.Default.CheckCircle 
-                              else Icons.Default.PlayArrow,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(28.dp)
-            )
-            Spacer(Modifier.width(16.dp))
-            Text(
-                text = when {
-                    isRunning -> "Layanan Aktif & Berjalan"
-                    else -> "Mulai Pengawasan"
-                },
-                style = MaterialTheme.typography.titleMedium,
-                color = Color.White,
-                fontWeight = FontWeight.Black
-            )
-        }
-    }
-}
-
-@Composable
-fun PulseIndicator() {
-    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-    val scale by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.5f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "scale"
-    )
-    val alpha by infiniteTransition.animateFloat(
-        initialValue = 0.8f,
-        targetValue = 0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "alpha"
-    )
-
-    Box(contentAlignment = Alignment.Center) {
-        Box(
-            modifier = Modifier
-                .size(12.dp)
-                .background(Color.White.copy(alpha = alpha), CircleShape)
-                .padding(4.dp)
-                .size(12.dp * scale)
-        )
-        Box(
-            modifier = Modifier
-                .size(8.dp)
-                .background(Color.White, CircleShape)
-        )
     }
 }
 
@@ -394,7 +339,7 @@ fun DashboardMenuItem(
         ) {
             Box(
                 modifier = Modifier
-                    .size(48.dp)
+                    .size(44.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
                 contentAlignment = Alignment.Center
@@ -402,7 +347,8 @@ fun DashboardMenuItem(
                 Icon(
                     icon,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
                 )
             }
             
@@ -422,10 +368,11 @@ fun DashboardMenuItem(
             }
 
             if (previewText != null) {
+                val statusColor = if (previewText == "Belum aktif" || previewText == "Nonaktif") Color(0xFFE53935) else MaterialTheme.colorScheme.primary
                 Text(
                     text = previewText,
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = statusColor,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(horizontal = 8.dp)
                 )
@@ -434,7 +381,8 @@ fun DashboardMenuItem(
             Icon(
                 Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.outline
+                tint = MaterialTheme.colorScheme.outline,
+                modifier = Modifier.size(20.dp)
             )
         }
     }

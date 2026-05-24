@@ -1,19 +1,33 @@
 package com.example.parental_watch.ui.player
 
-import android.annotation.SuppressLint
-import android.webkit.WebResourceRequest
-import android.webkit.WebView
-import android.webkit.WebViewClient
-import androidx.compose.foundation.layout.*
+import android.util.Log
+import android.view.ViewGroup
+import android.widget.FrameLayout
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.viewinterop.AndroidView
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.options.IFramePlayerOptions
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView
 
 @OptIn(ExperimentalMaterial3Api::class)
-@SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun PlayerScreen(
     videoId: String,
@@ -21,8 +35,76 @@ fun PlayerScreen(
     onRelatedVideoClicked: (String) -> Unit,
     onBack: () -> Unit
 ) {
-    val embedUrl = "https://www.youtube.com/embed/$videoId" +
-            "?rel=0&modestbranding=1&autoplay=1"
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    val youTubePlayerView = remember(videoId) {
+        YouTubePlayerView(context).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+
+            enableAutomaticInitialization = false
+
+            val options = IFramePlayerOptions.Builder(context)
+                .controls(1)
+                .rel(0)
+                .ivLoadPolicy(3)
+                .fullscreen(1)
+                .build()
+
+            val listener = object : AbstractYouTubePlayerListener() {
+                override fun onReady(youTubePlayer: YouTubePlayer) {
+                    Log.d("YT_PLAYER", "Player ready: $videoId")
+
+                    // Debug dulu: cueVideo tidak autoplay.
+                    youTubePlayer.cueVideo(videoId, 0f)
+
+                    // Kalau nanti sudah tampil normal, boleh ganti ke:
+                    // youTubePlayer.loadVideo(videoId, 0f)
+                }
+
+                override fun onStateChange(
+                    youTubePlayer: YouTubePlayer,
+                    state: PlayerConstants.PlayerState
+                ) {
+                    Log.d("YT_PLAYER", "State: $state")
+                }
+
+                override fun onError(
+                    youTubePlayer: YouTubePlayer,
+                    error: PlayerConstants.PlayerError
+                ) {
+                    Log.e("YT_PLAYER", "Error: $error")
+                }
+
+                override fun onVideoId(
+                    youTubePlayer: YouTubePlayer,
+                    loadedVideoId: String
+                ) {
+                    Log.d("YT_PLAYER", "Loaded videoId: $loadedVideoId")
+
+                    if (loadedVideoId != videoId) {
+                        Log.w("YT_PLAYER", "Related video clicked: $loadedVideoId")
+                        onRelatedVideoClicked(loadedVideoId)
+                        youTubePlayer.pause()
+                    }
+                }
+            }
+
+            initialize(listener, options)
+        }
+    }
+
+    DisposableEffect(youTubePlayerView, lifecycleOwner) {
+        lifecycleOwner.lifecycle.addObserver(youTubePlayerView)
+
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(youTubePlayerView)
+            youTubePlayerView.release()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -31,12 +113,15 @@ fun PlayerScreen(
                     Text(
                         text = title,
                         maxLines = 1,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Kembali"
+                        )
                     }
                 }
             )
@@ -46,57 +131,9 @@ fun PlayerScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            factory = { context ->
-                WebView(context).apply {
-                    settings.javaScriptEnabled = true
-                    settings.mediaPlaybackRequiresUserGesture = false
-
-                    webViewClient = object : WebViewClient() {
-                        override fun shouldOverrideUrlLoading(
-                            view: WebView,
-                            request: WebResourceRequest
-                        ): Boolean {
-                            val url = request.url.toString()
-
-                            // Intercept navigasi ke video lain
-                            val relatedVideoId = extractVideoId(url)
-                            if (relatedVideoId != null && relatedVideoId != videoId) {
-                                onRelatedVideoClicked(relatedVideoId)
-                                return true
-                            }
-
-                            // Block semua navigasi keluar dari YouTube
-                            if (!url.contains("youtube.com") && !url.contains("youtu.be")) {
-                                return true
-                            }
-
-                            return false
-                        }
-                    }
-
-                    loadUrl(embedUrl)
-                }
+            factory = {
+                youTubePlayerView
             }
         )
-    }
-}
-
-private fun extractVideoId(url: String): String? {
-    return try {
-        when {
-            url.contains("youtube.com/watch") -> {
-                val uri = android.net.Uri.parse(url)
-                uri.getQueryParameter("v")
-            }
-            url.contains("youtu.be/") -> {
-                url.substringAfter("youtu.be/").substringBefore("?")
-            }
-            url.contains("youtube.com/embed/") -> {
-                url.substringAfter("youtube.com/embed/").substringBefore("?")
-            }
-            else -> null
-        }
-    } catch (e: Exception) {
-        null
     }
 }

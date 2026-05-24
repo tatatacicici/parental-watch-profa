@@ -16,13 +16,16 @@ import com.example.parental_watch.ui.player.BlockScreen
 import com.example.parental_watch.ui.player.PlayerScreen
 import com.example.parental_watch.ui.player.VideoCheckScreen
 import com.example.parental_watch.ui.screens.ChangePinScreen
+import com.example.parental_watch.ui.screens.SplashScreen
 import com.example.parental_watch.ui.screens.ForgotPasswordScreen
+import com.example.parental_watch.ui.screens.GoogleLoginScreen
 import com.example.parental_watch.ui.screens.HomeScreen
 import com.example.parental_watch.ui.screens.LogScreen
 import com.example.parental_watch.ui.screens.ParentDashboardScreen
 import com.example.parental_watch.ui.screens.ParentLoginScreen
 import com.example.parental_watch.ui.screens.PermissionScreen
 import com.example.parental_watch.ui.screens.PinSetupScreen
+import com.example.parental_watch.ui.screens.StudyScheduleScreen
 import com.example.parental_watch.ui.screens.WhitelistScreen
 import com.example.parental_watch.ui.search.SearchScreen
 import com.example.parental_watch.ui.theme.ParentalWatchTheme
@@ -45,10 +48,40 @@ class MainActivity : ComponentActivity() {
 fun AppNavigation(prefManager: PreferencesManager) {
     val navController = rememberNavController()
 
+    val startDestination = Routes.SPLASH
+
     NavHost(
         navController = navController,
-        startDestination = Routes.HOME
+        startDestination = startDestination
     ) {
+        // ── Splash Screen ─────────────────────────────────────
+        composable(Routes.SPLASH) {
+            SplashScreen(
+                onSplashFinished = {
+                    val next = if (prefManager.isGoogleLoggedIn()) {
+                        Routes.HOME
+                    } else {
+                        Routes.GOOGLE_LOGIN
+                    }
+                    navController.navigate(next) {
+                        popUpTo(Routes.SPLASH) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        // ── Google Login ─────────────────────────────────────
+        composable(Routes.GOOGLE_LOGIN) {
+            GoogleLoginScreen(
+                prefManager = prefManager,
+                onLoginSuccess = {
+                    navController.navigate(Routes.HOME) {
+                        popUpTo(Routes.GOOGLE_LOGIN) { inclusive = true }
+                    }
+                }
+            )
+        }
+
         // ── Home ─────────────────────────────────────────────
         composable(Routes.HOME) {
             HomeScreen(
@@ -137,6 +170,9 @@ fun AppNavigation(prefManager: PreferencesManager) {
                 },
                 onVideoHistoryClick = {
                     navController.navigate(Routes.VIDEO_HISTORY)
+                },
+                onStudyScheduleClick = {
+                    navController.navigate(Routes.STUDY_SCHEDULE)
                 }
             )
         }
@@ -144,6 +180,8 @@ fun AppNavigation(prefManager: PreferencesManager) {
         // ── Child Mode ────────────────────────────────────────
         composable(Routes.CHILD_MODE) {
             SearchScreen(
+                isStudyTime = prefManager.isStudyTimeNow(),
+                studyScheduleText = prefManager.getStudyScheduleText(),
                 onVideoSelected = { video ->
                     navController.navigate(
                         Routes.videoCheck(
@@ -167,32 +205,41 @@ fun AppNavigation(prefManager: PreferencesManager) {
                 navArgument("thumbnailUrl") { type = NavType.StringType }
             )
         ) { backStackEntry ->
-            val videoId = backStackEntry.arguments?.getString("videoId") ?: ""
-            val title = java.net.URLDecoder.decode(
-                backStackEntry.arguments?.getString("title") ?: "", "UTF-8"
-            )
-            val channelTitle = java.net.URLDecoder.decode(
-                backStackEntry.arguments?.getString("channelTitle") ?: "", "UTF-8"
-            )
-            val thumbnailUrl = java.net.URLDecoder.decode(
-                backStackEntry.arguments?.getString("thumbnailUrl") ?: "", "UTF-8"
-            )
-            VideoCheckScreen(
-                videoId = videoId,
-                title = title,
-                channelTitle = channelTitle,
-                thumbnailUrl = thumbnailUrl,
-                onApproved = { vid, ttl ->
-                    navController.navigate(Routes.player(vid, ttl)) {
-                        popUpTo(Routes.VIDEO_CHECK) { inclusive = true }
+            if (prefManager.isStudyTimeNow()) {
+                SearchScreen(
+                    isStudyTime = true,
+                    studyScheduleText = prefManager.getStudyScheduleText(),
+                    onVideoSelected = {},
+                    onBack = { navController.popBackStack() }
+                )
+            } else {
+                val videoId = backStackEntry.arguments?.getString("videoId") ?: ""
+                val title = java.net.URLDecoder.decode(
+                    backStackEntry.arguments?.getString("title") ?: "", "UTF-8"
+                )
+                val channelTitle = java.net.URLDecoder.decode(
+                    backStackEntry.arguments?.getString("channelTitle") ?: "", "UTF-8"
+                )
+                val thumbnailUrl = java.net.URLDecoder.decode(
+                    backStackEntry.arguments?.getString("thumbnailUrl") ?: "", "UTF-8"
+                )
+                VideoCheckScreen(
+                    videoId = videoId,
+                    title = title,
+                    channelTitle = channelTitle,
+                    thumbnailUrl = thumbnailUrl,
+                    onApproved = { vid, ttl ->
+                        navController.navigate(Routes.player(vid, ttl)) {
+                            popUpTo(Routes.VIDEO_CHECK) { inclusive = true }
+                        }
+                    },
+                    onBlocked = { vid, ttl, reason, ratio ->
+                        navController.navigate(Routes.block(vid, ttl, reason, ratio)) {
+                            popUpTo(Routes.VIDEO_CHECK) { inclusive = true }
+                        }
                     }
-                },
-                onBlocked = { vid, ttl, reason, ratio ->
-                    navController.navigate(Routes.block(vid, ttl, reason, ratio)) {
-                        popUpTo(Routes.VIDEO_CHECK) { inclusive = true }
-                    }
-                }
-            )
+                )
+            }
         }
 
         composable(
@@ -261,6 +308,13 @@ fun AppNavigation(prefManager: PreferencesManager) {
 
         composable(Routes.VIDEO_HISTORY) {
             VideoHistoryScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Routes.STUDY_SCHEDULE) {
+            StudyScheduleScreen(
+                prefManager = prefManager,
+                onBack = { navController.popBackStack() }
+            )
         }
 
         // ── Whitelist ─────────────────────────────────────────

@@ -6,10 +6,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -17,8 +20,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.parental_watch.data.db.WatchHistory
@@ -37,10 +42,10 @@ fun VideoHistoryScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Riwayat Video") },
+                title = { Text("Riwayat Video YouTube", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
                     }
                 }
             )
@@ -52,26 +57,40 @@ fun VideoHistoryScreen(
                 .padding(padding)
         ) {
             // Filter tabs
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ScrollableTabRow(
+                selectedTabIndex = when(filter) {
+                    HistoryFilter.ALL -> 0
+                    HistoryFilter.PLAYED -> 1
+                    HistoryFilter.BLOCKED -> 2
+                },
+                edgePadding = 16.dp,
+                containerColor = Color.Transparent,
+                divider = {},
+                indicator = { tabPositions ->
+                    TabRowDefaults.SecondaryIndicator(
+                        Modifier.tabIndicatorOffset(tabPositions[when(filter) {
+                            HistoryFilter.ALL -> 0
+                            HistoryFilter.PLAYED -> 1
+                            HistoryFilter.BLOCKED -> 2
+                        }]),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             ) {
-                FilterChip(
+                Tab(
                     selected = filter == HistoryFilter.ALL,
                     onClick = { viewModel.setFilter(HistoryFilter.ALL) },
-                    label = { Text("Semua") }
+                    text = { Text("Semua") }
                 )
-                FilterChip(
+                Tab(
                     selected = filter == HistoryFilter.PLAYED,
                     onClick = { viewModel.setFilter(HistoryFilter.PLAYED) },
-                    label = { Text("Ditonton") }
+                    text = { Text("Ditonton") }
                 )
-                FilterChip(
+                Tab(
                     selected = filter == HistoryFilter.BLOCKED,
                     onClick = { viewModel.setFilter(HistoryFilter.BLOCKED) },
-                    label = { Text("Diblokir") }
+                    text = { Text("Diblokir") }
                 )
             }
 
@@ -90,10 +109,19 @@ fun VideoHistoryScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            "Belum ada riwayat video",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                Icons.Default.PlayArrow, 
+                                contentDescription = null, 
+                                modifier = Modifier.size(64.dp),
+                                tint = MaterialTheme.colorScheme.surfaceVariant
+                            )
+                            Spacer(Modifier.height(16.dp))
+                            Text(
+                                "Belum ada riwayat aktivitas",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
 
@@ -101,7 +129,7 @@ fun VideoHistoryScreen(
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(s.history) { item ->
                             WatchHistoryItem(item = item)
@@ -116,39 +144,59 @@ fun VideoHistoryScreen(
 @Composable
 fun WatchHistoryItem(item: WatchHistory) {
     val isBlocked = item.action == "BLOCKED"
-    val dateFormat = remember { SimpleDateFormat("dd MMM yyyy, HH:mm", Locale("id")) }
+    val dateFormat = remember { SimpleDateFormat("dd MMM, HH:mm", Locale("id")) }
+    
+    // Soft colors as requested
+    val successColor = Color(0xFF43A047)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+        )
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Thumbnail
-            if (item.thumbnailUrl.isNotBlank()) {
-                AsyncImage(
-                    model = item.thumbnailUrl,
-                    contentDescription = item.title,
-                    modifier = Modifier
-                        .size(width = 100.dp, height = 56.dp)
-                        .clip(RoundedCornerShape(8.dp)),
-                    contentScale = ContentScale.Crop
-                )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .size(width = 100.dp, height = 56.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Warning,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+            Box {
+                if (item.thumbnailUrl.isNotBlank()) {
+                    AsyncImage(
+                        model = item.thumbnailUrl,
+                        contentDescription = item.title,
+                        modifier = Modifier
+                            .size(width = 110.dp, height = 62.dp)
+                            .clip(RoundedCornerShape(8.dp)),
+                        contentScale = ContentScale.Crop
                     )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(width = 110.dp, height = 62.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Warning,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                
+                if (isBlocked) {
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color.Black.copy(alpha = 0.3f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Block, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
+                    }
                 }
             }
 
@@ -158,12 +206,10 @@ fun WatchHistoryItem(item: WatchHistory) {
                 Text(
                     text = item.title,
                     style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Bold,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
-
-                Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
                     text = item.channelTitle,
@@ -183,26 +229,47 @@ fun WatchHistoryItem(item: WatchHistory) {
             Spacer(modifier = Modifier.width(8.dp))
 
             // Status badge
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(
-                    imageVector = if (isBlocked) Icons.Default.Warning
-                                  else Icons.Default.CheckCircle,
-                    contentDescription = null,
-                    tint = if (isBlocked) MaterialTheme.colorScheme.error
-                           else Color(0xFF4CAF50),
-                    modifier = Modifier.size(20.dp)
-                )
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.width(60.dp)
+            ) {
                 Text(
-                    text = if (isBlocked) "Blokir" else "Tonton",
+                    text = if (isBlocked) "Diblokir" else "Ditonton",
                     style = MaterialTheme.typography.labelSmall,
-                    color = if (isBlocked) MaterialTheme.colorScheme.error
-                            else Color(0xFF4CAF50)
+                    fontWeight = FontWeight.Bold,
+                    color = if (isBlocked) Color(0xFFD32F2F) else successColor,
+                    textAlign = TextAlign.Center
                 )
-                if (isBlocked && item.offensiveRatio > 0f && item.offensiveRatio < 1f) {
-                    Text(
-                        text = "${(item.offensiveRatio * 100).toInt()}%",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.error
+                
+                if (isBlocked) {
+                    val reasonText = when(item.blockedReason) {
+                        "TITLE" -> "Judul"
+                        "COMMENTS" -> "Komentar"
+                        else -> ""
+                    }
+                    if (reasonText.isNotEmpty()) {
+                        Text(
+                            text = reasonText,
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                            color = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                    
+                    if (item.offensiveRatio > 0f) {
+                        Text(
+                            text = "${(item.offensiveRatio * 100).toInt()}%",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.error,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = successColor,
+                        modifier = Modifier.size(16.dp)
                     )
                 }
             }

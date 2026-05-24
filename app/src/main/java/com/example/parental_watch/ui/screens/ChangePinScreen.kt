@@ -132,7 +132,7 @@ fun ChangePinScreen(
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("Update PIN")
+                Text("Simpan PIN Baru")
             }
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -209,7 +209,7 @@ fun ChangePinScreen(
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
             ) {
-                Text("Update Pertanyaan")
+                Text("Simpan Pertanyaan")
             }
             
             Spacer(modifier = Modifier.height(40.dp))

@@ -34,11 +34,13 @@ class VideoRepository(context: Context) {
 
     suspend fun searchVideos(query: String): List<VideoItem> {
         return try {
-            val response = YoutubeApiClient.apiService.searchVideos(
+            // Step 1: Search
+            val searchResponse = YoutubeApiClient.apiService.searchVideos(
                 query = query,
                 apiKey = YoutubeApiClient.API_KEY
             )
-            response.items.mapNotNull { item ->
+
+            val items = searchResponse.items.mapNotNull { item ->
                 val videoId = item.id.videoId ?: return@mapNotNull null
                 VideoItem(
                     videoId = videoId,
@@ -47,6 +49,26 @@ class VideoRepository(context: Context) {
                     thumbnailUrl = item.snippet.thumbnails.medium?.url ?: ""
                 )
             }
+
+            if (items.isEmpty()) return emptyList()
+
+            // Step 2: Cek embeddable status — batch satu request
+            val videoIds = items.joinToString(",") { it.videoId }
+            val detailResponse = YoutubeApiClient.apiService.getVideoDetails(
+                videoId = videoIds,
+                apiKey = YoutubeApiClient.API_KEY
+            )
+
+            val embeddableIds = detailResponse.items
+                .filter { it.status.embeddable }
+                .map { it.id }
+                .toSet()
+
+            Log.d(TAG, "Embeddable: ${embeddableIds.size}/${items.size}")
+
+            // Step 3: Filter hanya yang embeddable
+            items.filter { it.videoId in embeddableIds }
+
         } catch (e: Exception) {
             Log.e(TAG, "Search error: ${e.message}")
             emptyList()
@@ -108,19 +130,32 @@ class VideoRepository(context: Context) {
         }
 
         return try {
-            // Ambil top 20 + recent 20
-            val topComments = YoutubeApiClient.apiService.getTopComments(
-                videoId = video.videoId,
-                apiKey = YoutubeApiClient.API_KEY
-            ).items.map {
-                it.snippet.topLevelComment.snippet.textDisplay
+            // Ambil top 20 + recent 20 dengan try-catch terpisah
+            val topComments = try {
+                YoutubeApiClient.apiService.getTopComments(
+                    videoId = video.videoId,
+                    apiKey = YoutubeApiClient.API_KEY
+                ).items.map { it.snippet.topLevelComment.snippet.textDisplay }
+            } catch (e: Exception) {
+                Log.w(TAG, "Top comments unavailable: ${e.message}")
+                emptyList()
             }
 
-            val recentComments = YoutubeApiClient.apiService.getRecentComments(
-                videoId = video.videoId,
-                apiKey = YoutubeApiClient.API_KEY
-            ).items.map {
-                it.snippet.topLevelComment.snippet.textDisplay
+            val recentComments = try {
+                YoutubeApiClient.apiService.getRecentComments(
+                    videoId = video.videoId,
+                    apiKey = YoutubeApiClient.API_KEY
+                ).items.map { it.snippet.topLevelComment.snippet.textDisplay }
+            } catch (e: Exception) {
+                Log.w(TAG, "Recent comments unavailable: ${e.message}")
+                emptyList()
+            }
+
+            // Kalau komentar tidak bisa diambil sama sekali → fail safe, izinkan play
+            if (topComments.isEmpty() && recentComments.isEmpty()) {
+                Log.w(TAG, "No comments available for ${video.videoId}, allowing play")
+                saveCache(video, gate2Result = "CLEAN", ratio = 0f, offensiveWords = emptyList())
+                return GateResult.Clean
             }
 
             // Gabung + dedup + filter terlalu pendek
@@ -130,7 +165,7 @@ class VideoRepository(context: Context) {
                 .take(40)
 
             if (allComments.isEmpty()) {
-                // Tidak ada komentar → anggap clean
+                // Tidak ada komentar setelah filter → anggap clean
                 saveCache(video, gate2Result = "CLEAN", ratio = 0f, offensiveWords = emptyList())
                 return GateResult.Clean
             }

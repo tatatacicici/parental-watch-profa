@@ -2,10 +2,22 @@ package com.example.parental_watch.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
+// Primary Colors
+val SoftSkyBlue = Color(0xFF3B8BD4)
+val SoftSkyBlueContainer = Color(0xFFDCEEFA)
 
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+// Accent
+val SoftCyan = Color(0xFF5FB8C4)
+
+// Status Colors
+val SuccessGreen = Color(0xFF43A047)
+val WarningOrange = Color(0xFFFB8C00)
+val DangerRed = Color(0xFFE53935)
+
+// Neutral Colors
+val BackgroundLight = Color(0xFFF8FAFC)
+val SurfaceLight = Color(0xFFFFFFFF)
+
+// Text Colors
+val TextPrimary = Color(0xFF1F2933)
+val TextSecondary = Color(0xFF6B7280)

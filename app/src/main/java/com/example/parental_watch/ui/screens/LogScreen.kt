@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -251,7 +252,12 @@ fun EmptyLogsState() {
                 .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)),
             contentAlignment = Alignment.Center
         ) {
-            Text("🎉", fontSize = 56.sp)
+            Icon(
+                imageVector = Icons.Default.VerifiedUser,
+                contentDescription = null,
+                modifier = Modifier.size(56.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
         }
         Spacer(modifier = Modifier.height(24.dp))
         Text(

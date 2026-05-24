@@ -1,6 +1,7 @@
 package com.example.parental_watch.ui
 
 object Routes {
+    const val SPLASH = "splash"
     const val HOME = "home"
     const val PERMISSION = "permission"
     const val PIN_SETUP = "pin_setup"
@@ -18,6 +19,9 @@ object Routes {
     const val PLAYER = "player/{videoId}/{title}"
     const val BLOCK = "block/{videoId}/{title}/{reason}/{ratio}"
     const val VIDEO_HISTORY = "video_history"
+    const val STUDY_SCHEDULE = "study_schedule"
+
+    const val GOOGLE_LOGIN = "google_login"
 
     // Helper untuk build route dengan argument
     fun videoCheck(videoId: String, title: String, channelTitle: String, thumbnailUrl: String) =

@@ -53,6 +53,10 @@ data class YoutubeCommentTextSnippet(
     val likeCount: Int = 0
 )
 
+data class YoutubeVideoDetailResponse(val items: List<YoutubeVideoDetailItem>)
+data class YoutubeVideoDetailItem(val id: String, val status: YoutubeVideoStatus)
+data class YoutubeVideoStatus(val embeddable: Boolean)
+
 interface YoutubeApiService {
 
     @GET("search")
@@ -60,7 +64,7 @@ interface YoutubeApiService {
         @Query("part") part: String = "snippet",
         @Query("q") query: String,
         @Query("type") type: String = "video",
-        @Query("maxResults") maxResults: Int = 10,
+        @Query("maxResults") maxResults: Int = 15,
         @Query("safeSearch") safeSearch: String = "strict",
         @Query("key") apiKey: String
     ): YoutubeSearchResponse
@@ -82,4 +86,11 @@ interface YoutubeApiService {
         @Query("maxResults") maxResults: Int = 20,
         @Query("key") apiKey: String
     ): YoutubeCommentResponse
+
+    @GET("videos")
+    suspend fun getVideoDetails(
+        @Query("part") part: String = "status",
+        @Query("id") videoId: String,
+        @Query("key") apiKey: String
+    ): YoutubeVideoDetailResponse
 }

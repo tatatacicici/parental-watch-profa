@@ -3,6 +3,7 @@ package com.example.parental_watch.data.preference
 import android.content.Context
 import android.content.SharedPreferences
 import java.security.MessageDigest
+import java.util.Calendar
 
 class PreferencesManager(context: Context) {
 
@@ -80,11 +81,87 @@ class PreferencesManager(context: Context) {
         return prefs.getBoolean(KEY_SERVICE_ENABLED, false)
     }
 
+    // ── Google Login Status ───────────────────────────────────
+    fun setGoogleLoggedIn(loggedIn: Boolean) {
+        prefs.edit().putBoolean(KEY_GOOGLE_LOGGED_IN, loggedIn).apply()
+    }
+
+    fun isGoogleLoggedIn(): Boolean {
+        return prefs.getBoolean(KEY_GOOGLE_LOGGED_IN, false)
+    }
+
+    // ── Jam Belajar ─────────────────────────────────────────────
+
+    fun setStudyModeEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_STUDY_MODE_ENABLED, enabled).apply()
+    }
+
+    fun isStudyModeEnabled(): Boolean {
+        return prefs.getBoolean(KEY_STUDY_MODE_ENABLED, false)
+    }
+
+    fun saveStudySchedule(
+        startHour: Int,
+        startMinute: Int,
+        endHour: Int,
+        endMinute: Int
+    ) {
+        prefs.edit()
+            .putInt(KEY_STUDY_START_HOUR, startHour)
+            .putInt(KEY_STUDY_START_MINUTE, startMinute)
+            .putInt(KEY_STUDY_END_HOUR, endHour)
+            .putInt(KEY_STUDY_END_MINUTE, endMinute)
+            .apply()
+    }
+
+    fun getStudyStartHour(): Int = prefs.getInt(KEY_STUDY_START_HOUR, 19)
+    fun getStudyStartMinute(): Int = prefs.getInt(KEY_STUDY_START_MINUTE, 0)
+    fun getStudyEndHour(): Int = prefs.getInt(KEY_STUDY_END_HOUR, 21)
+    fun getStudyEndMinute(): Int = prefs.getInt(KEY_STUDY_END_MINUTE, 0)
+
+    fun isStudyTimeNow(): Boolean {
+        if (!isStudyModeEnabled()) return false
+
+        val now = Calendar.getInstance()
+
+        val currentMinutes =
+            now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE)
+
+        val startMinutes =
+            getStudyStartHour() * 60 + getStudyStartMinute()
+
+        val endMinutes =
+            getStudyEndHour() * 60 + getStudyEndMinute()
+
+        return if (startMinutes <= endMinutes) {
+            currentMinutes in startMinutes until endMinutes
+        } else {
+            currentMinutes >= startMinutes || currentMinutes < endMinutes
+        }
+    }
+
+    fun getStudyScheduleText(): String {
+        return "%02d:%02d - %02d:%02d".format(
+            getStudyStartHour(),
+            getStudyStartMinute(),
+            getStudyEndHour(),
+            getStudyEndMinute()
+        )
+    }
+
     companion object {
         private const val PREF_NAME = "parental_watch_prefs"
         private const val KEY_WHITELIST = "whitelist"
         private const val KEY_SERVICE_ENABLED = "service_enabled"
         private const val KEY_SECURITY_QUESTION = "security_question"
         private const val KEY_SECURITY_ANSWER_HASH = "security_answer_hash"
+
+        private const val KEY_GOOGLE_LOGGED_IN = "google_logged_in"
+
+        private const val KEY_STUDY_MODE_ENABLED = "study_mode_enabled"
+        private const val KEY_STUDY_START_HOUR = "study_start_hour"
+        private const val KEY_STUDY_START_MINUTE = "study_start_minute"
+        private const val KEY_STUDY_END_HOUR = "study_end_hour"
+        private const val KEY_STUDY_END_MINUTE = "study_end_minute"
     }
 }
