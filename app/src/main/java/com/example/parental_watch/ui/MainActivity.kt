@@ -181,6 +181,7 @@ fun AppNavigation(prefManager: PreferencesManager) {
         composable(Routes.CHILD_MODE) {
             SearchScreen(
                 isStudyTime = prefManager.isStudyTimeNow(),
+                isTimeTampered = prefManager.isTimeTampered(),
                 studyScheduleText = prefManager.getStudyScheduleText(),
                 onVideoSelected = { video ->
                     navController.navigate(
@@ -208,6 +209,7 @@ fun AppNavigation(prefManager: PreferencesManager) {
             if (prefManager.isStudyTimeNow()) {
                 SearchScreen(
                     isStudyTime = true,
+                    isTimeTampered = prefManager.isTimeTampered(),
                     studyScheduleText = prefManager.getStudyScheduleText(),
                     onVideoSelected = {},
                     onBack = { navController.popBackStack() }

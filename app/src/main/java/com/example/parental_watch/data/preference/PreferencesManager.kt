@@ -2,10 +2,11 @@ package com.example.parental_watch.data.preference
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.provider.Settings
 import java.security.MessageDigest
 import java.util.Calendar
 
-class PreferencesManager(context: Context) {
+class PreferencesManager(private val context: Context) {
 
     private val prefs: SharedPreferences =
         context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
@@ -119,8 +120,23 @@ class PreferencesManager(context: Context) {
     fun getStudyEndHour(): Int = prefs.getInt(KEY_STUDY_END_HOUR, 21)
     fun getStudyEndMinute(): Int = prefs.getInt(KEY_STUDY_END_MINUTE, 0)
 
+    fun isTimeTampered(): Boolean {
+        return try {
+            Settings.Global.getInt(
+                context.contentResolver,
+                Settings.Global.AUTO_TIME,
+                0
+            ) == 0
+        } catch (e: Exception) {
+            false // Fallback in case of permission/API issues
+        }
+    }
+
     fun isStudyTimeNow(): Boolean {
         if (!isStudyModeEnabled()) return false
+        
+        // Anti-cheat: Lock if automatic time is disabled to prevent spoofing
+        if (isTimeTampered()) return true
 
         val now = Calendar.getInstance()
 

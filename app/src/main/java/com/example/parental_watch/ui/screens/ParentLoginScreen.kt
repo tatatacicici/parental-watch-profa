@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -42,129 +43,223 @@ fun ParentLoginScreen(
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { innerPadding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(horizontal = 32.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+                .background(MaterialTheme.colorScheme.background),
+            contentAlignment = Alignment.Center
         ) {
-            // --- 1. Header Visual (Visual Hierarchy) ---
-            Box(
-                modifier = Modifier
-                    .size(90.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Lock,
-                    contentDescription = null,
-                    modifier = Modifier.size(44.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text(
-                text = "Login Orang Tua",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Black,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-
-            Text(
-                text = "Masukkan PIN rahasia Anda untuk mengakses panel kontrol",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = 8.dp)
-            )
-
-            Spacer(modifier = Modifier.height(48.dp))
-
-            // --- 2. Input Section ---
-            OutlinedTextField(
-                value = pin,
-                onValueChange = { if (it.length <= 8) pin = it },
-                label = { Text("PIN Keamanan") },
-                visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                singleLine = true,
-                enabled = !isLocked,
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            // Feedback Sisa Percobaan
-            if (failedAttempts > 0 && !isLocked) {
-                Text(
-                    text = "Sisa percobaan: ${MAX_ATTEMPTS - failedAttempts}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier
-                        .align(Alignment.Start)
-                        .padding(start = 8.dp, top = 8.dp)
-                )
-            }
-
-            if (isLocked) {
-                Text(
-                    text = "Akses ditangguhkan. Silakan mulai ulang aplikasi.",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.error,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // --- 3. Action Buttons ---
-            Button(
-                onClick = {
-                    if (pin.isEmpty()) {
-                        scope.launch { snackbarHostState.showSnackbar("Silakan masukkan PIN") }
-                        return@Button
-                    }
-
-                    if (prefManager.validatePin(pin)) {
-                        failedAttempts = 0
-                        onLoginSuccess()
-                    } else {
-                        failedAttempts++
-                        pin = ""
-                        if (failedAttempts >= MAX_ATTEMPTS) {
-                            isLocked = true
-                        } else {
-                            scope.launch { snackbarHostState.showSnackbar("PIN yang Anda masukkan salah") }
-                        }
-                    }
-                },
-                enabled = !isLocked,
+            Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(16.dp)
+                    .padding(horizontal = 24.dp),
+                shape = RoundedCornerShape(28.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
-                Text("Buka Panel Kontrol", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-            }
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // Gradient header strip
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(120.dp)
+                            .background(
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color(0xFF3B8BD4),
+                                        Color(0xFF2A6CB0)
+                                    )
+                                ),
+                                shape = RoundedCornerShape(
+                                    topStart = 28.dp,
+                                    topEnd = 28.dp,
+                                    bottomStart = 0.dp,
+                                    bottomEnd = 0.dp
+                                )
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(64.dp)
+                                .clip(CircleShape)
+                                .background(Color.White.copy(alpha = 0.2f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Lock,
+                                contentDescription = null,
+                                modifier = Modifier.size(32.dp),
+                                tint = Color.White
+                            )
+                        }
+                    }
 
-            Spacer(modifier = Modifier.height(12.dp))
+                    // Content
+                    Column(
+                        modifier = Modifier.padding(horizontal = 28.dp, vertical = 24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Login Orang Tua",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Black,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
 
-            TextButton(
-                onClick = onForgotPasswordClick,
-                enabled = !isLocked
-            ) {
-                Text(
-                    text = "Lupa PIN?",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
-                )
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        Text(
+                            text = "Masukkan PIN rahasia Anda",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+
+                        Spacer(modifier = Modifier.height(28.dp))
+
+                        // PIN dots indicator
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.padding(bottom = 20.dp)
+                        ) {
+                            repeat(6) { index ->
+                                Box(
+                                    modifier = Modifier
+                                        .size(14.dp)
+                                        .clip(CircleShape)
+                                        .background(
+                                            if (index < pin.length) MaterialTheme.colorScheme.primary
+                                            else MaterialTheme.colorScheme.outlineVariant
+                                        )
+                                )
+                            }
+                        }
+
+                        OutlinedTextField(
+                            value = pin,
+                            onValueChange = { if (it.length <= 8) pin = it },
+                            label = { Text("PIN Keamanan") },
+                            visualTransformation = PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                            singleLine = true,
+                            enabled = !isLocked,
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        // Feedback
+                        if (failedAttempts > 0 && !isLocked) {
+                            Text(
+                                text = "Sisa percobaan: ${MAX_ATTEMPTS - failedAttempts}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier
+                                    .align(Alignment.Start)
+                                    .padding(start = 4.dp, top = 8.dp)
+                            )
+                        }
+
+                        if (isLocked) {
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 12.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.errorContainer
+                                ),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Text(
+                                    text = "Akses ditangguhkan. Silakan mulai ulang aplikasi.",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.padding(12.dp)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        Button(
+                            onClick = {
+                                if (pin.isEmpty()) {
+                                    scope.launch { snackbarHostState.showSnackbar("Silakan masukkan PIN") }
+                                    return@Button
+                                }
+
+                                if (prefManager.validatePin(pin)) {
+                                    failedAttempts = 0
+                                    onLoginSuccess()
+                                } else {
+                                    failedAttempts++
+                                    pin = ""
+                                    if (failedAttempts >= MAX_ATTEMPTS) {
+                                        isLocked = true
+                                    } else {
+                                        scope.launch { snackbarHostState.showSnackbar("PIN yang Anda masukkan salah") }
+                                    }
+                                }
+                            },
+                            enabled = !isLocked,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color.Transparent
+                            ),
+                            contentPadding = PaddingValues()
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        brush = if (!isLocked)
+                                            Brush.horizontalGradient(
+                                                colors = listOf(Color(0xFF3B8BD4), Color(0xFF2A6CB0))
+                                            )
+                                        else
+                                            Brush.horizontalGradient(
+                                                colors = listOf(
+                                                    Color(0xFFBDBDBD), Color(0xFF9E9E9E)
+                                                )
+                                            ),
+                                        shape = RoundedCornerShape(16.dp)
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    "Buka Panel Kontrol",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp,
+                                    color = Color.White
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        TextButton(
+                            onClick = onForgotPasswordClick,
+                            enabled = !isLocked
+                        ) {
+                            Text(
+                                text = "Lupa PIN?",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
             }
         }
     }

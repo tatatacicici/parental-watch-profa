@@ -1,13 +1,25 @@
 package com.example.parental_watch.ui.screens
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -29,7 +41,7 @@ fun PinSetupScreen(
     var pinConfirm by remember { mutableStateOf("") }
     var securityQuestion by remember { mutableStateOf("") }
     var securityAnswer by remember { mutableStateOf("") }
-    
+
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
@@ -43,6 +55,10 @@ fun PinSetupScreen(
     )
     var expanded by remember { mutableStateOf(false) }
 
+    // Step completion
+    val isPinFilled = pin.length >= 4 && pin == pinConfirm
+    val isQuestionFilled = securityQuestion.isNotBlank() && securityAnswer.isNotBlank()
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { innerPadding ->
@@ -50,122 +66,157 @@ fun PinSetupScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 32.dp)
+                .padding(horizontal = 24.dp)
                 .verticalScroll(scrollState),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(40.dp))
-            
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // Header
             Text(
                 text = "Setup Keamanan",
                 style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Black
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             Text(
-                text = "Buat PIN dan pertanyaan keamanan untuk melindungi akses panel orang tua.",
-                style = MaterialTheme.typography.bodySmall,
+                text = "Buat PIN dan pertanyaan keamanan\nuntuk melindungi akses panel orang tua.",
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(40.dp))
-
-            // --- Bagian PIN ---
-            Text(
-                text = "1. Buat PIN Baru",
-                style = MaterialTheme.typography.titleSmall,
-                modifier = Modifier.align(Alignment.Start),
-                fontWeight = FontWeight.Bold
-            )
-            
-            Spacer(modifier = Modifier.height(8.dp))
-
-            OutlinedTextField(
-                value = pin,
-                onValueChange = { if (it.length <= 8) pin = it },
-                label = { Text("PIN Baru (min. 4 digit)") },
-                visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-
             Spacer(modifier = Modifier.height(12.dp))
 
-            OutlinedTextField(
-                value = pinConfirm,
-                onValueChange = { if (it.length <= 8) pinConfirm = it },
-                label = { Text("Konfirmasi PIN") },
-                visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
+            // Progress stepper
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                StepDot(completed = isPinFilled, label = "PIN")
+                Box(
+                    modifier = Modifier
+                        .width(48.dp)
+                        .height(2.dp)
+                        .background(
+                            if (isPinFilled) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.outlineVariant
+                        )
+                )
+                StepDot(completed = isQuestionFilled, label = "Keamanan")
+            }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(28.dp))
 
-            // --- Bagian Challenge ---
-            Text(
-                text = "2. Pertanyaan Keamanan (Challenge)",
-                style = MaterialTheme.typography.titleSmall,
-                modifier = Modifier.align(Alignment.Start),
-                fontWeight = FontWeight.Bold
-            )
-            
-            Text(
-                text = "Digunakan jika Anda lupa PIN.",
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.align(Alignment.Start),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            ExposedDropdownMenuBox(
-                expanded = expanded,
-                onExpandedChange = { expanded = !expanded },
-                modifier = Modifier.fillMaxWidth()
+            // Section 1: PIN
+            SetupSectionCard(
+                stepNumber = "1",
+                title = "Buat PIN Baru",
+                icon = Icons.Default.Lock,
+                completed = isPinFilled
             ) {
                 OutlinedTextField(
-                    value = securityQuestion,
-                    onValueChange = { securityQuestion = it },
-                    label = { Text("Pilih Pertanyaan") },
-                    readOnly = false,
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                    modifier = Modifier.menuAnchor().fillMaxWidth(),
-                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                    value = pin,
+                    onValueChange = { if (it.length <= 8) pin = it },
+                    label = { Text("PIN Baru (min. 4 digit)") },
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                    singleLine = true,
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.fillMaxWidth()
                 )
-                ExposedDropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false }
-                ) {
-                    questions.forEach { question ->
-                        DropdownMenuItem(
-                            text = { Text(question) },
-                            onClick = {
-                                securityQuestion = question
-                                expanded = false
-                            }
-                        )
-                    }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = pinConfirm,
+                    onValueChange = { if (it.length <= 8) pinConfirm = it },
+                    label = { Text("Konfirmasi PIN") },
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                    singleLine = true,
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                if (pin.isNotEmpty() && pinConfirm.isNotEmpty() && pin != pinConfirm) {
+                    Text(
+                        text = "PIN tidak cocok",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(start = 4.dp, top = 6.dp)
+                    )
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            OutlinedTextField(
-                value = securityAnswer,
-                onValueChange = { securityAnswer = it },
-                label = { Text("Jawaban Keamanan") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
+            // Section 2: Security Question
+            SetupSectionCard(
+                stepNumber = "2",
+                title = "Pertanyaan Keamanan",
+                icon = Icons.Default.Security,
+                completed = isQuestionFilled
+            ) {
+                Text(
+                    text = "Digunakan jika Anda lupa PIN.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
 
-            Spacer(modifier = Modifier.height(40.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
+                ExposedDropdownMenuBox(
+                    expanded = expanded,
+                    onExpandedChange = { expanded = !expanded },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedTextField(
+                        value = securityQuestion,
+                        onValueChange = { securityQuestion = it },
+                        label = { Text("Pilih Pertanyaan") },
+                        readOnly = false,
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                        modifier = Modifier.menuAnchor().fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        questions.forEach { question ->
+                            DropdownMenuItem(
+                                text = { Text(question) },
+                                onClick = {
+                                    securityQuestion = question
+                                    expanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = securityAnswer,
+                    onValueChange = { securityAnswer = it },
+                    label = { Text("Jawaban Keamanan") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // Save button
             Button(
                 onClick = {
                     when {
@@ -187,12 +238,141 @@ fun PinSetupScreen(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp)
+                    .height(56.dp),
+                shape = RoundedCornerShape(16.dp),
+                enabled = isPinFilled && isQuestionFilled,
+                colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                contentPadding = PaddingValues()
             ) {
-                Text("Selesaikan Setup", fontWeight = FontWeight.Bold)
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            brush = if (isPinFilled && isQuestionFilled)
+                                Brush.horizontalGradient(listOf(Color(0xFF3B8BD4), Color(0xFF2A6CB0)))
+                            else
+                                Brush.horizontalGradient(listOf(Color(0xFFBDBDBD), Color(0xFF9E9E9E))),
+                            shape = RoundedCornerShape(16.dp)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "Selesaikan Setup",
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
             }
-            
-            Spacer(modifier = Modifier.height(40.dp))
+
+            Spacer(modifier = Modifier.height(32.dp))
+        }
+    }
+}
+
+@Composable
+private fun StepDot(completed: Boolean, label: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .clip(CircleShape)
+                .background(
+                    if (completed) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.surfaceVariant
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            if (completed) {
+                Icon(
+                    Icons.Default.CheckCircle,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = if (completed) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = if (completed) FontWeight.Bold else FontWeight.Normal
+        )
+    }
+}
+
+@Composable
+private fun SetupSectionCard(
+    stepNumber: String,
+    title: String,
+    icon: ImageVector,
+    completed: Boolean,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(
+                width = 1.dp,
+                color = if (completed) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                        else MaterialTheme.colorScheme.outlineVariant,
+                shape = RoundedCornerShape(20.dp)
+            ),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (completed) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.primaryContainer
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (completed) {
+                        Icon(
+                            Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    } else {
+                        Text(
+                            stepNumber,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Icon(
+                    icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            content()
         }
     }
 }

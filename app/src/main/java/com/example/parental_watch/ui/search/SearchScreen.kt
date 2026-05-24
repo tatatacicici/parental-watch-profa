@@ -14,12 +14,18 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.SearchOff
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.parental_watch.data.VideoItem
@@ -30,6 +36,7 @@ fun SearchScreen(
     onVideoSelected: (VideoItem) -> Unit,
     onBack: () -> Unit,
     isStudyTime: Boolean = false,
+    isTimeTampered: Boolean = false,
     studyScheduleText: String = "",
     viewModel: SearchViewModel = viewModel()
 ) {
@@ -55,46 +62,71 @@ fun SearchScreen(
                 .padding(horizontal = 16.dp)
         ) {
             if (isStudyTime) {
-                StudyLockScreen(studyScheduleText, onBack)
+                StudyLockScreen(studyScheduleText, isTimeTampered, onBack)
                 return@Column
             }
 
-            // Search bar
-            OutlinedTextField(
-                value = query,
-                onValueChange = { query = it },
+            // Elevated Search Bar
+            Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                placeholder = { Text("Cari video...") },
-                leadingIcon = {
-                    Icon(Icons.Default.Search, contentDescription = null)
-                },
-                trailingIcon = {
-                    if (query.isNotBlank()) {
-                        IconButton(onClick = { viewModel.search(query) }) {
-                            Icon(Icons.Default.Search, contentDescription = "Cari")
+                    .padding(vertical = 12.dp),
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 2.dp,
+                shadowElevation = 2.dp
+            ) {
+                TextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    placeholder = { Text("Ketik judul video...") },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.Search,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    },
+                    trailingIcon = {
+                        if (query.isNotBlank()) {
+                            IconButton(
+                                onClick = { viewModel.search(query) },
+                                modifier = Modifier
+                                    .padding(end = 4.dp)
+                                    .size(36.dp)
+                                    .background(MaterialTheme.colorScheme.primary, CircleShape)
+                            ) {
+                                Icon(
+                                    Icons.Default.Search,
+                                    contentDescription = "Cari",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
                         }
-                    }
-                },
-                singleLine = true,
-                shape = RoundedCornerShape(12.dp)
-            )
+                    },
+                    singleLine = true,
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        disabledContainerColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
 
             Spacer(modifier = Modifier.height(8.dp))
 
             // State handling
             when (val s = state) {
                 is SearchState.Idle -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            "Ketik untuk mencari video",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    EmptyStateView(
+                        icon = Icons.Default.PlayArrow,
+                        title = "Mulai Pencarian",
+                        desc = "Ketik judul video yang ingin kamu tonton di atas."
+                    )
                 }
 
                 is SearchState.Loading -> {
@@ -102,32 +134,25 @@ fun SearchScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator()
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                     }
                 }
 
                 is SearchState.Empty -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            "Tidak ada hasil untuk \"$query\"",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    EmptyStateView(
+                        icon = Icons.Default.SearchOff,
+                        title = "Tidak Ditemukan",
+                        desc = "Video \"$query\" tidak ditemukan.\nCoba kata kunci lain."
+                    )
                 }
 
                 is SearchState.Error -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            "Error: ${s.message}",
-                            color = MaterialTheme.colorScheme.error
-                        )
-                    }
+                    EmptyStateView(
+                        icon = Icons.Default.Warning,
+                        title = "Terjadi Kesalahan",
+                        desc = s.message,
+                        isError = true
+                    )
                 }
 
                 is SearchState.Success -> {
@@ -146,7 +171,48 @@ fun SearchScreen(
 }
 
 @Composable
-fun StudyLockScreen(schedule: String, onBack: () -> Unit) {
+fun EmptyStateView(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, desc: String, isError: Boolean = false) {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(100.dp)
+                .background(
+                    if (isError) MaterialTheme.colorScheme.errorContainer 
+                    else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+                    CircleShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                icon,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+            )
+        }
+        Spacer(modifier = Modifier.height(24.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = desc,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+@Composable
+fun StudyLockScreen(schedule: String, isTampered: Boolean, onBack: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -156,7 +222,8 @@ fun StudyLockScreen(schedule: String, onBack: () -> Unit) {
         Card(
             shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                containerColor = if (isTampered) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
+                                 else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
             )
         ) {
             Column(
@@ -165,24 +232,26 @@ fun StudyLockScreen(schedule: String, onBack: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.School,
+                    imageVector = if (isTampered) Icons.Default.Warning else Icons.Default.School,
                     contentDescription = null,
                     modifier = Modifier.size(80.dp),
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = if (isTampered) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
                 )
                 
                 Text(
-                    text = "Mode Jam Belajar Aktif",
+                    text = if (isTampered) "Waktu Perangkat Tidak Valid" else "Mode Jam Belajar Aktif",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Black,
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    color = if (isTampered) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
                 )
                 
                 Text(
-                    text = "Fitur video dikunci sampai jam selesai.\nSilakan kembali setelah jam belajar ($schedule).",
+                    text = if (isTampered) "Setelan 'Waktu Otomatis' di HP dimatikan.\nSilakan aktifkan kembali di Pengaturan HP untuk membuka batasan ini."
+                           else "Fitur video dikunci sampai jam selesai.\nSilakan kembali setelah jam belajar ($schedule).",
                     style = MaterialTheme.typography.bodyLarge,
                     textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (isTampered) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -207,8 +276,13 @@ fun VideoListItem(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp)
+            .clickable(onClick = onClick)
+            .padding(vertical = 2.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
             modifier = Modifier.padding(8.dp),
@@ -218,8 +292,8 @@ fun VideoListItem(
                 model = video.thumbnailUrl,
                 contentDescription = video.title,
                 modifier = Modifier
-                    .size(width = 120.dp, height = 68.dp)
-                    .clip(RoundedCornerShape(8.dp)),
+                    .size(width = 130.dp, height = 74.dp)
+                    .clip(RoundedCornerShape(12.dp)),
                 contentScale = ContentScale.Crop
             )
 

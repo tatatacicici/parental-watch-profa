@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
@@ -153,8 +154,9 @@ fun WatchHistoryItem(item: WatchHistory) {
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-        )
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
@@ -230,47 +232,53 @@ fun WatchHistoryItem(item: WatchHistory) {
 
             // Status badge
             Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.width(60.dp)
+                horizontalAlignment = Alignment.End,
+                modifier = Modifier.width(72.dp)
             ) {
-                Text(
-                    text = if (isBlocked) "Diblokir" else "Ditonton",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = if (isBlocked) Color(0xFFD32F2F) else successColor,
-                    textAlign = TextAlign.Center
-                )
+                Surface(
+                    color = if (isBlocked) Color(0xFFE53935).copy(alpha = 0.15f) else successColor.copy(alpha = 0.15f),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(
+                        text = if (isBlocked) "Diblokir" else "Aman",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isBlocked) Color(0xFFE53935) else successColor,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
                 
                 if (isBlocked) {
+                    Spacer(modifier = Modifier.height(6.dp))
                     val reasonText = when(item.blockedReason) {
                         "TITLE" -> "Judul"
                         "COMMENTS" -> "Komentar"
                         else -> ""
                     }
                     if (reasonText.isNotEmpty()) {
-                        Text(
-                            text = reasonText,
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                            color = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
-                            textAlign = TextAlign.Center
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.Warning,
+                                contentDescription = null,
+                                tint = Color(0xFFE53935),
+                                modifier = Modifier.size(10.dp)
+                            )
+                            Spacer(Modifier.width(2.dp))
+                            Text(
+                                text = reasonText,
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                color = Color(0xFFE53935).copy(alpha = 0.9f)
+                            )
+                        }
                     }
                     
                     if (item.offensiveRatio > 0f) {
                         Text(
-                            text = "${(item.offensiveRatio * 100).toInt()}%",
-                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                            color = MaterialTheme.colorScheme.error,
-                            textAlign = TextAlign.Center
+                            text = "${(item.offensiveRatio * 100).toInt()}% kasar",
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, fontWeight = FontWeight.Bold),
+                            color = Color(0xFFE53935)
                         )
                     }
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.CheckCircle,
-                        contentDescription = null,
-                        tint = successColor,
-                        modifier = Modifier.size(16.dp)
-                    )
                 }
             }
         }
