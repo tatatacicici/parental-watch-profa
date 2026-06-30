@@ -1,6 +1,7 @@
 package com.example.parental_watch.ui.player
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.parental_watch.data.GateResult
@@ -35,6 +36,9 @@ class VideoCheckViewModel(app: Application) : AndroidViewModel(app) {
 
     fun checkVideo(video: VideoItem) {
         viewModelScope.launch {
+            val startTime = System.currentTimeMillis()
+            Log.d("LATENCY_TEST", "Mulai pengecekan video: ${video.videoId}")
+
             // Gate 1 — cek judul
             _state.value = VideoCheckState.CheckingTitle
 
@@ -53,6 +57,9 @@ class VideoCheckViewModel(app: Application) : AndroidViewModel(app) {
                         ratio = 1f,
                         recommendations = recommendations
                     )
+                    
+                    val endTime = System.currentTimeMillis()
+                    Log.d("LATENCY_TEST", "Selesai (DIBLOKIR di Gate 1). Latensi: ${endTime - startTime} ms")
                     return@launch
                 }
                 is GateResult.Error -> {
@@ -80,6 +87,8 @@ class VideoCheckViewModel(app: Application) : AndroidViewModel(app) {
                         ratio = gate2.ratio,
                         recommendations = recommendations
                     )
+                    val endTime = System.currentTimeMillis()
+                    Log.d("LATENCY_TEST", "Selesai (DIBLOKIR di Gate 2). Latensi: ${endTime - startTime} ms")
                 }
                 is GateResult.Clean -> {
                     repository.saveHistory(
@@ -87,11 +96,15 @@ class VideoCheckViewModel(app: Application) : AndroidViewModel(app) {
                         action = "PLAYED"
                     )
                     _state.value = VideoCheckState.Approved(video)
+                    val endTime = System.currentTimeMillis()
+                    Log.d("LATENCY_TEST", "Selesai (AMAN di Gate 2). Latensi: ${endTime - startTime} ms")
                 }
                 is GateResult.Error -> {
                     // Kalau error di gate 2, fail open — izinkan play
                     repository.saveHistory(video = video, action = "PLAYED")
                     _state.value = VideoCheckState.Approved(video)
+                    val endTime = System.currentTimeMillis()
+                    Log.d("LATENCY_TEST", "Selesai (ERROR Gate 2, FAIL OPEN). Latensi: ${endTime - startTime} ms")
                 }
             }
         }

@@ -1,6 +1,3 @@
 <resources>
     <string name="app_name">TontonAman</string>
-    <string name="accessibility_service_description">
-        Parental Watch memantau konten teks di layar untuk melindungi anak dari kata-kata tidak pantas.
-    </string>
 </resources>

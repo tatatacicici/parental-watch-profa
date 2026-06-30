@@ -91,6 +91,15 @@ class PreferencesManager(private val context: Context) {
         return prefs.getBoolean(KEY_GOOGLE_LOGGED_IN, false)
     }
 
+    // ── Onboarding ────────────────────────────────────────────
+    fun isOnboardingComplete(): Boolean {
+        return prefs.getBoolean(KEY_ONBOARDING_COMPLETE, false)
+    }
+
+    fun setOnboardingComplete(complete: Boolean) {
+        prefs.edit().putBoolean(KEY_ONBOARDING_COMPLETE, complete).apply()
+    }
+
     // ── Jam Belajar ─────────────────────────────────────────────
 
     fun setStudyModeEnabled(enabled: Boolean) {
@@ -173,6 +182,7 @@ class PreferencesManager(private val context: Context) {
         private const val KEY_SECURITY_ANSWER_HASH = "security_answer_hash"
 
         private const val KEY_GOOGLE_LOGGED_IN = "google_logged_in"
+        private const val KEY_ONBOARDING_COMPLETE = "onboarding_complete"
 
         private const val KEY_STUDY_MODE_ENABLED = "study_mode_enabled"
         private const val KEY_STUDY_START_HOUR = "study_start_hour"

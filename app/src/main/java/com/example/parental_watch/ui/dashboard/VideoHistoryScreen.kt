@@ -23,11 +23,13 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.parental_watch.data.db.WatchHistory
+import com.example.parental_watch.ui.theme.ParentalWatchTheme
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -39,6 +41,7 @@ fun VideoHistoryScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val filter by viewModel.filter.collectAsState()
+    var selectedItem by remember { mutableStateOf<WatchHistory?>(null) }
 
     Scaffold(
         topBar = {
@@ -133,17 +136,123 @@ fun VideoHistoryScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(s.history) { item ->
-                            WatchHistoryItem(item = item)
+                            WatchHistoryItem(
+                                item = item,
+                                onClick = { selectedItem = item }
+                            )
                         }
                     }
                 }
             }
         }
     }
+
+    if (selectedItem != null) {
+        HistoryDetailDialog(
+            item = selectedItem!!,
+            onDismiss = { selectedItem = null }
+        )
+    }
 }
 
 @Composable
-fun WatchHistoryItem(item: WatchHistory) {
+fun HistoryDetailDialog(item: WatchHistory, onDismiss: () -> Unit) {
+    val isBlocked = item.action == "BLOCKED"
+    val dateFormat = remember { SimpleDateFormat("dd MMM yyyy, HH:mm", Locale("id")) }
+    val successColor = Color(0xFF43A047)
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = if (isBlocked) Icons.Default.Block else Icons.Default.CheckCircle,
+                    contentDescription = null,
+                    tint = if (isBlocked) MaterialTheme.colorScheme.error else successColor,
+                    modifier = Modifier.size(28.dp)
+                )
+                Spacer(Modifier.width(12.dp))
+                Text("Detail Inferensi", fontWeight = FontWeight.Bold)
+            }
+        },
+        text = {
+            Column {
+                Text(
+                    text = item.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = item.channelTitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "Status: ${if (isBlocked) "DIBLOKIR" else "AMAN"}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isBlocked) MaterialTheme.colorScheme.error else successColor
+                )
+                
+                if (isBlocked) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Alasan Pemblokiran:",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    val reason = when (item.blockedReason) {
+                        "TITLE" -> "Sistem mendeteksi kata-kata tidak pantas/kasar pada judul video."
+                        "COMMENTS" -> "Sistem mendeteksi tingginya rasio komentar kasar pada video ini."
+                        else -> "Terdeteksi konten tidak pantas."
+                    }
+                    Text(
+                        text = reason,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    
+                    if (item.offensiveRatio > 0f) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Tingkat Kasar (Confidence/Ratio):",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "${(item.offensiveRatio * 100).toInt()}% kata kasar",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Waktu Akses: ${dateFormat.format(Date(item.watchedAt))}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Tutup", fontWeight = FontWeight.Bold)
+            }
+        },
+        containerColor = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(20.dp)
+    )
+}
+
+@Composable
+fun WatchHistoryItem(item: WatchHistory, onClick: () -> Unit) {
     val isBlocked = item.action == "BLOCKED"
     val dateFormat = remember { SimpleDateFormat("dd MMM, HH:mm", Locale("id")) }
     
@@ -151,6 +260,7 @@ fun WatchHistoryItem(item: WatchHistory) {
     val successColor = Color(0xFF43A047)
 
     Card(
+        onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
@@ -282,5 +392,13 @@ fun WatchHistoryItem(item: WatchHistory) {
                 }
             }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun VideoHistoryScreenPreview() {
+    ParentalWatchTheme {
+        VideoHistoryScreen(onBack = {})
     }
 }

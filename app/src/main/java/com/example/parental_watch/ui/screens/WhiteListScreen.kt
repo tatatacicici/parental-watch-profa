@@ -22,10 +22,12 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import com.example.parental_watch.data.preference.PreferencesManager
+import com.example.parental_watch.ui.theme.ParentalWatchTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -190,5 +192,18 @@ fun AppCardItem(app: AppInfo, isChecked: Boolean, onCheckedChange: (Boolean) -> 
             }
             Checkbox(checked = isChecked, onCheckedChange = onCheckedChange)
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun WhitelistScreenPreview() {
+    val context = LocalContext.current
+    val prefManager = PreferencesManager(context)
+    ParentalWatchTheme {
+        WhitelistScreen(
+            prefManager = prefManager,
+            onBack = {}
+        )
     }
 }

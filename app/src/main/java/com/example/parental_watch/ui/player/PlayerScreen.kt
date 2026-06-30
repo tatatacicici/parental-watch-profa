@@ -3,6 +3,7 @@ package com.example.parental_watch.ui.player
 import android.util.Log
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -16,11 +17,14 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.viewinterop.AndroidView
+import com.example.parental_watch.ui.theme.ParentalWatchTheme
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener
@@ -51,7 +55,7 @@ fun PlayerScreen(
                 .controls(1)
                 .rel(0)
                 .ivLoadPolicy(3)
-                .fullscreen(1)
+                .fullscreen(0) // Fullscreen dinonaktifkan untuk mencegah force close
                 .build()
 
             val listener = object : AbstractYouTubePlayerListener() {
@@ -135,5 +139,35 @@ fun PlayerScreen(
                 youTubePlayerView
             }
         )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PlayerScreenPreview() {
+    ParentalWatchTheme {
+        // PlayerScreen menggunakan AndroidView (YouTubePlayerView)
+        // Preview hanya menampilkan skeleton Scaffold
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("Preview: Video Player") },
+                    navigationIcon = {
+                        IconButton(onClick = {}) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
+                        }
+                    }
+                )
+            }
+        ) { padding ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("YouTube Player (tidak tersedia di Preview)")
+            }
+        }
     }
 }

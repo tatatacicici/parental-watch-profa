@@ -8,6 +8,7 @@ import com.example.parental_watch.data.db.WatchHistory
 import com.example.parental_watch.network.ApiClient
 import com.example.parental_watch.network.BatchClassifyRequest
 import com.example.parental_watch.network.YoutubeApiClient
+import com.example.parental_watch.utils.DummyClassifier
 import com.google.gson.Gson
 
 data class VideoItem(
@@ -28,6 +29,7 @@ class VideoRepository(context: Context) {
     private val db = AppDatabase.getInstance(context)
     private val cacheDao = db.videoCacheDao()
     private val historyDao = db.watchHistoryDao()
+    private val fallbackClassifier = DummyClassifier()
     private val TAG = "VideoRepository"
 
     // ─── Search ───────────────────────────────────────────────
@@ -110,8 +112,24 @@ class VideoRepository(context: Context) {
                 GateResult.Clean
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Gate1 error: ${e.message}")
-            GateResult.Error(e.message ?: "Unknown error")
+            Log.w(TAG, "Gate1 server error, using local fallback: ${e.message}")
+            // Fallback: klasifikasi lokal dengan keyword matching
+            val localResult = fallbackClassifier.classify(video.title)
+            if (localResult.isOffensive) {
+                cacheDao.insert(VideoCache(
+                    videoId = video.videoId,
+                    title = video.title,
+                    channelTitle = video.channelTitle,
+                    thumbnailUrl = video.thumbnailUrl,
+                    gate1Result = "BLOCKED",
+                    gate2Result = "SKIP",
+                    offensiveRatio = 1f,
+                    offensiveWords = Gson().toJson(listOf(video.title))
+                ))
+                GateResult.Blocked("TITLE")
+            } else {
+                GateResult.Clean
+            }
         }
     }
 
@@ -194,8 +212,53 @@ class VideoRepository(context: Context) {
             }
 
         } catch (e: Exception) {
-            Log.e(TAG, "Gate2 error: ${e.message}")
-            GateResult.Error(e.message ?: "Unknown error")
+            Log.w(TAG, "Gate2 server error, using local fallback: ${e.message}")
+            // Fallback: klasifikasi lokal dengan keyword matching untuk setiap komentar
+            try {
+                val topComments = try {
+                    YoutubeApiClient.apiService.getTopComments(
+                        videoId = video.videoId,
+                        apiKey = YoutubeApiClient.API_KEY
+                    ).items.map { it.snippet.topLevelComment.snippet.textDisplay }
+                } catch (_: Exception) { emptyList() }
+
+                val recentComments = try {
+                    YoutubeApiClient.apiService.getRecentComments(
+                        videoId = video.videoId,
+                        apiKey = YoutubeApiClient.API_KEY
+                    ).items.map { it.snippet.topLevelComment.snippet.textDisplay }
+                } catch (_: Exception) { emptyList() }
+
+                val allComments = (topComments + recentComments)
+                    .distinct()
+                    .filter { it.trim().split(" ").size >= 3 }
+                    .take(40)
+
+                if (allComments.isEmpty()) {
+                    saveCache(video, gate2Result = "CLEAN", ratio = 0f, offensiveWords = emptyList())
+                    return GateResult.Clean
+                }
+
+                val localResults = allComments.map { fallbackClassifier.classify(it) }
+                val offensiveCount = localResults.count { it.isOffensive }
+                val ratio = offensiveCount.toFloat() / allComments.size
+                val offensiveWords = allComments.zip(localResults)
+                    .filter { (_, result) -> result.isOffensive }
+                    .map { (text, _) -> text.take(50) }
+
+                Log.d(TAG, "Gate2 fallback: ${video.videoId} ratio=$ratio ($offensiveCount/${allComments.size})")
+
+                if (ratio > 0.20f) {
+                    saveCache(video, gate2Result = "BLOCKED", ratio = ratio, offensiveWords = offensiveWords)
+                    GateResult.Blocked("COMMENTS", ratio)
+                } else {
+                    saveCache(video, gate2Result = "CLEAN", ratio = ratio, offensiveWords = offensiveWords)
+                    GateResult.Clean
+                }
+            } catch (fallbackError: Exception) {
+                Log.e(TAG, "Gate2 fallback also failed: ${fallbackError.message}")
+                GateResult.Error(fallbackError.message ?: "Unknown error")
+            }
         }
     }
 

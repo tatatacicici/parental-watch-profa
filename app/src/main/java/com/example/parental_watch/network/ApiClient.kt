@@ -7,21 +7,14 @@ import java.util.concurrent.TimeUnit
 
 object ApiClient {
 
-    // URL ngrok yang kamu berikan
-    private const val BASE_URL = "https://flavored-whoever-flint.ngrok-free.dev/"
+    // URL VPS backend classifier
+    private const val BASE_URL = "http://103.30.195.155:8000/"
 
-    // Config client untuk handle timeout inferensi (60 detik) 
-    // dan skip halaman warning ngrok agar tidak error saat diakses aplikasi
+    // Config client untuk handle timeout inferensi (60 detik)
     private val okHttpClient = OkHttpClient.Builder()
         .connectTimeout(60, TimeUnit.SECONDS)
         .readTimeout(60, TimeUnit.SECONDS)
         .writeTimeout(60, TimeUnit.SECONDS)
-        .addInterceptor { chain ->
-            val request = chain.request().newBuilder()
-                .addHeader("ngrok-skip-browser-warning", "true")
-                .build()
-            chain.proceed(request)
-        }
         .build()
 
     private val retrofit = Retrofit.Builder()

@@ -12,6 +12,7 @@ object Routes {
     const val LOG = "log"
     const val CHANGE_PIN = "change_pin"
     const val FORGOT_PASSWORD = "forgot_password"
+    const val ONBOARDING = "onboarding"
 
     // Fitur YouTube wrapper
     const val SEARCH = "search"

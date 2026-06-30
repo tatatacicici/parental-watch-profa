@@ -1,5 +1,6 @@
 package com.example.parental_watch.ui.screens
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -11,9 +12,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -24,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.parental_watch.data.preference.PreferencesManager
 import com.example.parental_watch.ui.theme.ParentalWatchTheme
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private const val MAX_ATTEMPTS = 5
@@ -40,6 +45,38 @@ fun ParentLoginScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
+    // ── Entry Animations ──────────────────────────────────────
+    val cardScale = remember { Animatable(0.9f) }
+    val cardAlpha = remember { Animatable(0f) }
+    
+    LaunchedEffect(Unit) {
+        cardScale.animateTo(1f, tween(500, easing = FastOutSlowInEasing))
+    }
+    LaunchedEffect(Unit) {
+        cardAlpha.animateTo(1f, tween(500, easing = FastOutSlowInEasing))
+    }
+
+    // ── Idle Animations (Decorative) ──────────────────────────
+    val infiniteTransition = rememberInfiniteTransition(label = "decoLogin")
+    val cloudOffsetX1 by infiniteTransition.animateFloat(
+        initialValue = -8f,
+        targetValue = 8f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(4000, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "loginCloud1"
+    )
+    val cloudOffsetX2 by infiniteTransition.animateFloat(
+        initialValue = 6f,
+        targetValue = -6f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(5000, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "loginCloud2"
+    )
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { innerPadding ->
@@ -50,11 +87,47 @@ fun ParentLoginScreen(
                 .background(MaterialTheme.colorScheme.background),
             contentAlignment = Alignment.Center
         ) {
+            // ── Decorative Bokeh Circles ──────────────────────
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(x = 15.dp, y = 60.dp)
+                    .graphicsLayer { translationX = cloudOffsetX1 }
+                    .size(90.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
+                        shape = CircleShape
+                    )
+            )
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .offset(x = (-20).dp, y = 140.dp)
+                    .graphicsLayer { translationX = cloudOffsetX2 }
+                    .size(60.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.06f),
+                        shape = CircleShape
+                    )
+            )
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .offset(x = 30.dp, y = (-180).dp)
+                    .size(45.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.18f),
+                        shape = CircleShape
+                    )
+            )
+
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp),
-                shape = RoundedCornerShape(28.dp),
+                    .padding(horizontal = 24.dp)
+                    .scale(cardScale.value)
+                    .alpha(cardAlpha.value),
+                shape = RoundedCornerShape(24.dp), // Konsisten dgn card utama
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surface
                 ),
@@ -77,8 +150,8 @@ fun ParentLoginScreen(
                                     )
                                 ),
                                 shape = RoundedCornerShape(
-                                    topStart = 28.dp,
-                                    topEnd = 28.dp,
+                                    topStart = 24.dp,
+                                    topEnd = 24.dp,
                                     bottomStart = 0.dp,
                                     bottomEnd = 0.dp
                                 )
@@ -150,7 +223,7 @@ fun ParentLoginScreen(
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                             singleLine = true,
                             enabled = !isLocked,
-                            shape = RoundedCornerShape(16.dp),
+                            shape = RoundedCornerShape(14.dp),
                             modifier = Modifier.fillMaxWidth()
                         )
 
@@ -188,6 +261,7 @@ fun ParentLoginScreen(
 
                         Spacer(modifier = Modifier.height(24.dp))
 
+                        // Konsistensi tombol CTA: 64dp, corner 20dp, font titleLarge
                         Button(
                             onClick = {
                                 if (pin.isEmpty()) {
@@ -211,8 +285,8 @@ fun ParentLoginScreen(
                             enabled = !isLocked,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(56.dp),
-                            shape = RoundedCornerShape(16.dp),
+                                .height(64.dp),
+                            shape = RoundedCornerShape(20.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = Color.Transparent
                             ),
@@ -232,14 +306,14 @@ fun ParentLoginScreen(
                                                     Color(0xFFBDBDBD), Color(0xFF9E9E9E)
                                                 )
                                             ),
-                                        shape = RoundedCornerShape(16.dp)
+                                        shape = RoundedCornerShape(20.dp)
                                     ),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     "Buka Panel Kontrol",
+                                    style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 16.sp,
                                     color = Color.White
                                 )
                             }
@@ -253,7 +327,7 @@ fun ParentLoginScreen(
                         ) {
                             Text(
                                 text = "Lupa PIN?",
-                                style = MaterialTheme.typography.labelLarge,
+                                style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.primary,
                                 fontWeight = FontWeight.Bold
                             )

@@ -13,8 +13,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.parental_watch.data.preference.PreferencesManager
+import androidx.compose.ui.platform.LocalContext
+import com.example.parental_watch.ui.theme.ParentalWatchTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -213,4 +216,17 @@ private fun TimeInputField(
         modifier = modifier,
         shape = RoundedCornerShape(12.dp)
     )
+}
+
+@Preview(showBackground = true)
+@Composable
+fun StudyScheduleScreenPreview() {
+    val context = LocalContext.current
+    val prefManager = PreferencesManager(context)
+    ParentalWatchTheme {
+        StudyScheduleScreen(
+            prefManager = prefManager,
+            onBack = {}
+        )
+    }
 }

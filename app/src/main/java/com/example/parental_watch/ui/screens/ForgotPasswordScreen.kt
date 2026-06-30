@@ -220,3 +220,17 @@ fun ForgotPasswordScreen(
         }
     }
 }
+
+@Preview(showBackground = true)
+@Composable
+fun ForgotPasswordScreenPreview() {
+    val context = LocalContext.current
+    val prefManager = PreferencesManager(context)
+    ParentalWatchTheme {
+        ForgotPasswordScreen(
+            prefManager = prefManager,
+            onBack = {},
+            onResetSuccess = {}
+        )
+    }
+}

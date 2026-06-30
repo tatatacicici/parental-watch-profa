@@ -21,7 +21,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.tooling.preview.Preview
 import com.example.parental_watch.R
+import com.example.parental_watch.ui.theme.ParentalWatchTheme
 import kotlinx.coroutines.delay
 
 @Composable
@@ -124,5 +126,13 @@ fun SplashScreen(
                 .padding(bottom = 32.dp)
                 .alpha(taglineAlpha.value)
         )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun SplashScreenPreview() {
+    ParentalWatchTheme {
+        SplashScreen(onSplashFinished = {})
     }
 }

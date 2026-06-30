@@ -13,10 +13,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.parental_watch.data.VideoItem
 import com.example.parental_watch.ui.search.VideoListItem
+import com.example.parental_watch.ui.theme.ParentalWatchTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -152,5 +154,20 @@ fun BlockScreen(
                 else -> {}
             }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun BlockScreenPreview() {
+    ParentalWatchTheme {
+        BlockScreen(
+            videoId = "test123",
+            title = "Video Contoh",
+            reason = "Konten tidak pantas terdeteksi pada komentar video.",
+            ratio = 0.35f,
+            onRecommendationSelected = {},
+            onBack = {}
+        )
     }
 }

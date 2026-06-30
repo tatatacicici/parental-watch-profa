@@ -1,6 +1,9 @@
 package com.example.parental_watch.ui
 
 import android.os.Bundle
+import android.util.Log
+import android.webkit.CookieManager
+import android.webkit.WebStorage
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -21,6 +24,7 @@ import com.example.parental_watch.ui.screens.ForgotPasswordScreen
 import com.example.parental_watch.ui.screens.GoogleLoginScreen
 import com.example.parental_watch.ui.screens.HomeScreen
 import com.example.parental_watch.ui.screens.LogScreen
+import com.example.parental_watch.ui.screens.OnboardingScreen
 import com.example.parental_watch.ui.screens.ParentDashboardScreen
 import com.example.parental_watch.ui.screens.ParentLoginScreen
 import com.example.parental_watch.ui.screens.PermissionScreen
@@ -58,10 +62,10 @@ fun AppNavigation(prefManager: PreferencesManager) {
         composable(Routes.SPLASH) {
             SplashScreen(
                 onSplashFinished = {
-                    val next = if (prefManager.isGoogleLoggedIn()) {
-                        Routes.HOME
-                    } else {
-                        Routes.GOOGLE_LOGIN
+                    val next = when {
+                        !prefManager.isGoogleLoggedIn() -> Routes.GOOGLE_LOGIN
+                        !prefManager.isOnboardingComplete() -> Routes.ONBOARDING
+                        else -> Routes.HOME
                     }
                     navController.navigate(next) {
                         popUpTo(Routes.SPLASH) { inclusive = true }
@@ -75,8 +79,25 @@ fun AppNavigation(prefManager: PreferencesManager) {
             GoogleLoginScreen(
                 prefManager = prefManager,
                 onLoginSuccess = {
-                    navController.navigate(Routes.HOME) {
+                    val next = if (prefManager.isOnboardingComplete()) {
+                        Routes.HOME
+                    } else {
+                        Routes.ONBOARDING
+                    }
+                    navController.navigate(next) {
                         popUpTo(Routes.GOOGLE_LOGIN) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        // ── Onboarding Tutorial ─────────────────────────────────
+        composable(Routes.ONBOARDING) {
+            OnboardingScreen(
+                onFinish = {
+                    prefManager.setOnboardingComplete(true)
+                    navController.navigate(Routes.HOME) {
+                        popUpTo(Routes.ONBOARDING) { inclusive = true }
                     }
                 }
             )
@@ -159,12 +180,6 @@ fun AppNavigation(prefManager: PreferencesManager) {
                         popUpTo(Routes.HOME) { inclusive = true }
                     }
                 },
-                onWhitelistClick = {
-                    navController.navigate(Routes.WHITELIST)
-                },
-                onLogClick = {
-                    navController.navigate(Routes.LOG)
-                },
                 onChangePinClick = {
                     navController.navigate(Routes.CHANGE_PIN)
                 },
@@ -173,6 +188,19 @@ fun AppNavigation(prefManager: PreferencesManager) {
                 },
                 onStudyScheduleClick = {
                     navController.navigate(Routes.STUDY_SCHEDULE)
+                },
+                onGoogleLogoutClick = {
+                    // Clear Google Login state
+                    prefManager.setGoogleLoggedIn(false)
+                    // Clear WebView cookies/session to force re-login next time
+                    CookieManager.getInstance().removeAllCookies(null)
+                    CookieManager.getInstance().flush()
+                    WebStorage.getInstance().deleteAllData()
+                    
+                    // Navigate to Google Login
+                    navController.navigate(Routes.GOOGLE_LOGIN) {
+                        popUpTo(0) { inclusive = true }
+                    }
                 }
             )
         }
