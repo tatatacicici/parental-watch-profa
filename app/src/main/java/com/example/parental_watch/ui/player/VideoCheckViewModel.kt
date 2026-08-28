@@ -37,12 +37,18 @@ class VideoCheckViewModel(app: Application) : AndroidViewModel(app) {
     fun checkVideo(video: VideoItem) {
         viewModelScope.launch {
             val startTime = System.currentTimeMillis()
+            Log.d("LATENCY_TEST", "========================================")
             Log.d("LATENCY_TEST", "Mulai pengecekan video: ${video.videoId}")
+            Log.d("LATENCY_TEST", "Judul: ${video.title}")
 
-            // Gate 1 — cek judul
+            // ── Gate 1 — cek judul ──────────────────────────────
             _state.value = VideoCheckState.CheckingTitle
+            val gate1Start = System.currentTimeMillis()
+            val gate1 = repository.checkTitle(video)
+            val gate1Time = System.currentTimeMillis() - gate1Start
+            Log.d("LATENCY_TEST", "Gate 1 (Title) selesai: ${gate1Time} ms → ${gate1::class.simpleName}")
 
-            when (val gate1 = repository.checkTitle(video)) {
+            when (gate1) {
                 is GateResult.Blocked -> {
                     repository.saveHistory(
                         video = video,
@@ -58,21 +64,28 @@ class VideoCheckViewModel(app: Application) : AndroidViewModel(app) {
                         recommendations = recommendations
                     )
                     
-                    val endTime = System.currentTimeMillis()
-                    Log.d("LATENCY_TEST", "Selesai (DIBLOKIR di Gate 1). Latensi: ${endTime - startTime} ms")
+                    val totalTime = System.currentTimeMillis() - startTime
+                    Log.d("LATENCY_TEST", "HASIL: DIBLOKIR di Gate 1")
+                    Log.d("LATENCY_TEST", "WAKTU: Total=${totalTime}ms | G1=${gate1Time}ms | G2=SKIP")
+                    Log.d("LATENCY_TEST", "========================================")
                     return@launch
                 }
                 is GateResult.Error -> {
+                    Log.d("LATENCY_TEST", "Gate 1 ERROR, lanjut ke Gate 2 (fail open)")
                     // Kalau error, lanjut ke gate 2 — fail open
                     // supaya tidak block video tanpa alasan
                 }
                 is GateResult.Clean -> { /* lanjut */ }
             }
 
-            // Gate 2 — cek komentar
+            // ── Gate 2 — cek komentar ───────────────────────────
             _state.value = VideoCheckState.CheckingComments
+            val gate2Start = System.currentTimeMillis()
+            val gate2 = repository.checkComments(video)
+            val gate2Time = System.currentTimeMillis() - gate2Start
+            Log.d("LATENCY_TEST", "Gate 2 (Comments) selesai: ${gate2Time} ms → ${gate2::class.simpleName}")
 
-            when (val gate2 = repository.checkComments(video)) {
+            when (gate2) {
                 is GateResult.Blocked -> {
                     repository.saveHistory(
                         video = video,
@@ -87,8 +100,10 @@ class VideoCheckViewModel(app: Application) : AndroidViewModel(app) {
                         ratio = gate2.ratio,
                         recommendations = recommendations
                     )
-                    val endTime = System.currentTimeMillis()
-                    Log.d("LATENCY_TEST", "Selesai (DIBLOKIR di Gate 2). Latensi: ${endTime - startTime} ms")
+                    val totalTime = System.currentTimeMillis() - startTime
+                    Log.d("LATENCY_TEST", "HASIL: DIBLOKIR di Gate 2 (ratio=${gate2.ratio})")
+                    Log.d("LATENCY_TEST", "WAKTU: Total=${totalTime}ms | G1=${gate1Time}ms | G2=${gate2Time}ms")
+                    Log.d("LATENCY_TEST", "========================================")
                 }
                 is GateResult.Clean -> {
                     repository.saveHistory(
@@ -96,15 +111,19 @@ class VideoCheckViewModel(app: Application) : AndroidViewModel(app) {
                         action = "PLAYED"
                     )
                     _state.value = VideoCheckState.Approved(video)
-                    val endTime = System.currentTimeMillis()
-                    Log.d("LATENCY_TEST", "Selesai (AMAN di Gate 2). Latensi: ${endTime - startTime} ms")
+                    val totalTime = System.currentTimeMillis() - startTime
+                    Log.d("LATENCY_TEST", "HASIL: AMAN (lolos Gate 1 + Gate 2)")
+                    Log.d("LATENCY_TEST", "WAKTU: Total=${totalTime}ms | G1=${gate1Time}ms | G2=${gate2Time}ms")
+                    Log.d("LATENCY_TEST", "========================================")
                 }
                 is GateResult.Error -> {
                     // Kalau error di gate 2, fail open — izinkan play
                     repository.saveHistory(video = video, action = "PLAYED")
                     _state.value = VideoCheckState.Approved(video)
-                    val endTime = System.currentTimeMillis()
-                    Log.d("LATENCY_TEST", "Selesai (ERROR Gate 2, FAIL OPEN). Latensi: ${endTime - startTime} ms")
+                    val totalTime = System.currentTimeMillis() - startTime
+                    Log.d("LATENCY_TEST", "HASIL: ERROR Gate 2 → FAIL OPEN (izinkan play)")
+                    Log.d("LATENCY_TEST", "WAKTU: Total=${totalTime}ms | G1=${gate1Time}ms | G2=${gate2Time}ms")
+                    Log.d("LATENCY_TEST", "========================================")
                 }
             }
         }

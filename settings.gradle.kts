@@ -22,6 +22,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "parental-watch"
+rootProject.name = "pandutonton"
 include(":app")
  

@@ -313,6 +313,8 @@ fun AppNavigation(prefManager: PreferencesManager) {
             val title = java.net.URLDecoder.decode(
                 backStackEntry.arguments?.getString("title") ?: "", "UTF-8"
             )
+            // reason di-doubleEncode di Routes.block() karena mengandung '%'.
+            // NavController sudah Uri.decode sekali → kita cukup URLDecoder.decode sekali lagi.
             val reason = java.net.URLDecoder.decode(
                 backStackEntry.arguments?.getString("reason") ?: "", "UTF-8"
             )

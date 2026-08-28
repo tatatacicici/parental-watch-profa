@@ -51,7 +51,7 @@ fun OnboardingScreen(
             icon = Icons.Default.Shield,
             iconColor = Color(0xFF2E7D32),
             iconBgColor = Color(0xFFE8F5E9),
-            title = "Selamat Datang di\nTontonAman! 👋",
+            title = "Selamat Datang di\nPanduTonton! 👋",
             description = "Aplikasi ini membantu melindungi anak Anda dari konten YouTube yang tidak pantas secara otomatis.",
             highlight = "Aman & Otomatis"
         ),

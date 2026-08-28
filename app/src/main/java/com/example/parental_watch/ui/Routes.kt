@@ -32,8 +32,21 @@ object Routes {
         "player/$videoId/${encode(title)}"
 
     fun block(videoId: String, title: String, reason: String, ratio: Float) =
-        "block/$videoId/${encode(title)}/${encode(reason)}/$ratio"
+        "block/$videoId/${encode(title)}/${doubleEncode(reason)}/$ratio"
 
+    /**
+     * Encode biasa — untuk segmen yang tidak mengandung karakter '%' dari data user.
+     */
     private fun encode(value: String) =
         java.net.URLEncoder.encode(value, "UTF-8")
+
+    /**
+     * Double-encode — untuk string yang BISA mengandung '%' (misal pesan ratio "35% komentar").
+     * NavController meng-decode path sekali sebelum menyerahkan ke navArgument;
+     * double-encode memastikan '%25' dibaca literal, bukan sebagai escape sequence.
+     */
+    private fun doubleEncode(value: String): String {
+        val firstPass = java.net.URLEncoder.encode(value, "UTF-8")
+        return java.net.URLEncoder.encode(firstPass, "UTF-8")
+    }
 }

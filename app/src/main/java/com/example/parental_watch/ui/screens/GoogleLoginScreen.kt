@@ -237,7 +237,7 @@ private fun LoginPromptContent(onStartLogin: () -> Unit) {
             ) {
                 Image(
                     painter = painterResource(id = R.drawable.logo_app_icon),
-                    contentDescription = "Logo TontonAman",
+                    contentDescription = "Logo PanduTonton",
                     modifier = Modifier
                         .size(130.dp)
                         .scale(logoScale.value)
@@ -263,7 +263,7 @@ private fun LoginPromptContent(onStartLogin: () -> Unit) {
 
             // Subtitle — jelas, formal, informatif
             Text(
-                text = "Login Google diperlukan untuk mengakses YouTube secara aman melalui TontonAman.",
+                text = "Login Google diperlukan untuk mengakses YouTube secara aman melalui PanduTonton.",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,

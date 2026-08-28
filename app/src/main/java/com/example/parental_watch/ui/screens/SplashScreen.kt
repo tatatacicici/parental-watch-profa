@@ -85,7 +85,7 @@ fun SplashScreen(
             // App Logo
             Image(
                 painter = painterResource(id = R.drawable.logo_app_icon),
-                contentDescription = "TontonAman Logo",
+                contentDescription = "PanduTonton Logo",
                 modifier = Modifier
                     .size(180.dp)
                     .scale(scale.value)
@@ -96,7 +96,7 @@ fun SplashScreen(
 
             // App Name
             Text(
-                text = "TontonAman",
+                text = "PanduTonton",
                 fontSize = 36.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = Color(0xFF2C6FAC),

@@ -202,7 +202,7 @@ fun HomeScreen(
             // Logo with entry animation
             Image(
                 painter = painterResource(id = R.drawable.logo_app_nb_icon),
-                contentDescription = "Logo TontonAman",
+                contentDescription = "Logo PanduTonton",
                 modifier = Modifier
                     .size(140.dp)
                     .scale(logoScale.value)
